@@ -1,24 +1,19 @@
-//
-//  ContentView.swift
-//  splitsy
-//
-//  Created by Brian Kim on 11/7/24.
-//
-
 import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Testing")
+        NavigationView {
+            VStack(spacing: 20) {
+                NavigationLink("Scan New Receipt", destination: ReceiptScannerView())
+                NavigationLink("View Receipt History", destination: ReceiptHistoryView())
+            }
+            .navigationTitle("Receipt Scanner")
         }
-        .padding()
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }
