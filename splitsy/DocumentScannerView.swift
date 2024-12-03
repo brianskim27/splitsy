@@ -169,5 +169,6 @@ extension DocumentScannerView.Coordinator {
         
         self.scannedText = formattedText
     }
-
 }
+
+// Need to fix

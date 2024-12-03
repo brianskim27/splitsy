@@ -47,7 +47,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
                 }
             }
         }
-
+        
         func performOCR(on image: UIImage) {
             guard let cgImage = image.cgImage else { return }
             
