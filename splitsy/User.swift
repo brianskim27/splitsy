@@ -1,7 +1,7 @@
 import Foundation
 
-struct User {
+struct User: Identifiable {
     let id: String
-    var name: String
-    var assignedItems: [ReceiptItem]
+    let name: String
+    var assignedItemIDs: [UUID] = [] // List of ReceiptItem IDs
 }

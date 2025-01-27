@@ -1,87 +1,105 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct ItemAssignmentView: View {
-    let items: [ReceiptItem]
+    @State var items: [ReceiptItem] // Items to assign
     @State private var users: [User] = []
-
+    @State private var selectedItems: [ReceiptItem] = [] // Track selected items
     @State private var newUserName: String = ""
     @State private var errorMessage: String? = nil
+    @State private var userShares: [String: Double] = [:] // Stores calculated shares
+    @State private var isResultViewActive = false // Controls navigation to ResultView
+    @State private var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]
 
     var body: some View {
-        VStack {
-            HStack {
-                TextField("Enter new user name", text: $newUserName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                Button("Add User") {
-                    addUser()
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding()
-
-            if let errorMessage = errorMessage {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-            }
-
-            HStack(spacing: 20) {
-                // List of items to drag
-                List {
-                    Section(header: Text("Items")) {
-                        ForEach(items, id: \.name) { item in
-                            Text(item.name)
-                                .padding()
-                                .background(Color.secondary.opacity(0.1))
-                                .cornerRadius(5)
-                                .onDrag {
-                                    NSItemProvider(object: item.name as NSString)
-                                }
-                        }
+        NavigationStack {
+            VStack {
+                // Add new user section
+                HStack {
+                    TextField("Enter new user name", text: $newUserName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    Button("Add User") {
+                        addUser()
                     }
+                    .buttonStyle(.bordered)
                 }
-                .frame(width: 200)
+                .padding()
 
-                // List of users with drop zones
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 20) {
-                        ForEach(users.indices, id: \.self) { index in
-                            VStack {
-                                Text(users[index].name)
-                                    .font(.headline)
-                                    .padding()
-                                    .background(Color.blue.opacity(0.2))
-                                    .cornerRadius(10)
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .padding(.bottom)
+                }
 
-                                VStack {
-                                    ForEach(users[index].assignedItems, id: \.name) { item in
-                                        Text(item.name)
-                                            .padding()
-                                            .background(Color.secondary.opacity(0.1))
-                                            .cornerRadius(5)
-                                    }
-                                }
-                                .padding()
-                                .frame(maxWidth: .infinity, minHeight: 100)
-                                .background(Color.secondary.opacity(0.05))
-                                .cornerRadius(10)
-                                .onDrop(of: [UTType.text], isTargeted: nil) { providers in
-                                    handleDrop(for: index, providers: providers)
-                                }
+                // Main assignment view
+                HStack {
+                    // Items list
+                    VStack {
+                        HStack {
+                            Text("Items")
+                                .font(.headline)
+                            Spacer()
+                            Button(action: toggleSelectAll) {
+                                Text(selectedItems.count == items.count ? "Deselect All" : "Select All")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .padding(.horizontal)
+
+                        List {
+                            ForEach(items, id: \.id) { item in
+                                let isSelected = selectedItems.contains(where: { $0.id == item.id })
+                                ItemRow(
+                                    item: item,
+                                    isSelected: isSelected,
+                                    onTap: { toggleSelection(for: item) }
+                                )
+                            }
+                        }
+                        .frame(maxWidth: 200)
+                    }
+
+                    // Users list
+                    VStack {
+                        Text("Users")
+                            .font(.headline)
+                            .padding(.bottom)
+
+                        ScrollView {
+                            ForEach(users.indices, id: \.self) { index in
+                                UserRow(
+                                    user: users[index],
+                                    items: items,
+                                    onAssign: { assignSelectedItems(to: users[index]) },
+                                    onUnassign: { item in unassignItem(item, from: users[index]) }
+                                )
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(height: 300)
-            }
 
-            Button("Calculate Shares") {
-                let shares = calculateUserShares(users: users)
-                print("Shares: \(shares)")
+                // NavigationLink to ResultView
+                NavigationLink(
+                    destination: ResultView(userShares: userShares, detailedBreakdown: detailedBreakdown),
+                    isActive: $isResultViewActive
+                ) {
+                    EmptyView()
+                }
+                .hidden()
+
+                // Calculate and navigate
+                Button("Calculate Shares") {
+                    let (shares, breakdown) = calculateUserShares()
+                    userShares = shares
+                    detailedBreakdown = breakdown
+                    isResultViewActive = true
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.top)
             }
-            .buttonStyle(.borderedProminent)
+            .navigationTitle("Assign Items")
+            .padding()
         }
-        .navigationTitle("Assign Items")
     }
 
     // Add a new user
@@ -96,39 +114,89 @@ struct ItemAssignmentView: View {
             return
         }
 
-        users.append(User(id: UUID().uuidString, name: newUserName, assignedItems: []))
+        users.append(User(id: UUID().uuidString, name: newUserName, assignedItemIDs: []))
         newUserName = ""
         errorMessage = nil
     }
 
-    // Handle item drop onto a user
-    private func handleDrop(for userIndex: Int, providers: [NSItemProvider]) -> Bool {
-        for provider in providers {
-            if provider.canLoadObject(ofClass: NSString.self) {
-                provider.loadObject(ofClass: NSString.self) { object, error in
-                    if let itemName = object as? String {
-                        if let item = items.first(where: { $0.name == itemName }) {
-                            DispatchQueue.main.async {
-                                users[userIndex].assignedItems.append(item)
-                            }
-                        }
+    private func toggleSelection(for item: ReceiptItem) {
+        if let index = selectedItems.firstIndex(where: { $0.id == item.id }) {
+            selectedItems.remove(at: index)
+        } else {
+            selectedItems.append(item)
+        }
+    }
+
+    private func toggleSelectAll() {
+        if selectedItems.count == items.count {
+            selectedItems.removeAll()
+        } else {
+            selectedItems = items
+        }
+    }
+
+    private func assignSelectedItems(to user: User) {
+        guard !selectedItems.isEmpty else {
+            errorMessage = "No items selected."
+            return
+        }
+
+        if let userIndex = users.firstIndex(where: { $0.id == user.id }) {
+            for item in selectedItems {
+                if let itemIndex = items.firstIndex(where: { $0.id == item.id }) {
+                    if !items[itemIndex].assignedUsers.contains(user.name) {
+                        items[itemIndex].assignedUsers.append(user.name)
+                    }
+
+                    if !users[userIndex].assignedItemIDs.contains(item.id) {
+                        users[userIndex].assignedItemIDs.append(item.id)
                     }
                 }
-                return true
+            }
+            errorMessage = nil
+        }
+    }
+
+    private func unassignItem(_ item: ReceiptItem, from user: User) {
+        if let userIndex = users.firstIndex(where: { $0.id == user.id }) {
+            if let itemIDIndex = users[userIndex].assignedItemIDs.firstIndex(of: item.id) {
+                users[userIndex].assignedItemIDs.remove(at: itemIDIndex)
+            }
+
+            if let itemIndex = items.firstIndex(where: { $0.id == item.id }) {
+                if let userIndexInItem = items[itemIndex].assignedUsers.firstIndex(of: user.name) {
+                    items[itemIndex].assignedUsers.remove(at: userIndexInItem)
+                }
             }
         }
-        return false
     }
-    
-    // Calculate user shares
-    private func calculateUserShares(users: [User]) -> [String: Double] {
+
+    private func calculateUserShares() -> (shares: [String: Double], breakdown: [String: [(item: String, cost: Double)]]) {
         var userShares: [String: Double] = [:]
+        var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]
 
         for user in users {
-            let totalCost = user.assignedItems.reduce(0.0) { $0 + $1.cost }
-            userShares[user.name] = totalCost
+            var totalCost = 0.0
+            var userBreakdown: [(item: String, cost: Double)] = []
+
+            for itemID in user.assignedItemIDs {
+                if let item = items.first(where: { $0.id == itemID }) {
+                    if item.assignedUsers.count > 0 {
+                        // Calculate split cost
+                        let splitCost = round((item.cost / Double(item.assignedUsers.count)) * 100) / 100
+                        totalCost += splitCost
+
+                        // Add item to user’s detailed breakdown
+                        userBreakdown.append((item: item.name, cost: splitCost))
+                    }
+                }
+            }
+
+            // Store user’s total cost and detailed breakdown
+            userShares[user.name] = round(totalCost * 100) / 100
+            detailedBreakdown[user.name] = userBreakdown
         }
 
-        return userShares
+        return (userShares, detailedBreakdown)
     }
 }
