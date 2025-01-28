@@ -151,18 +151,7 @@ struct ReceiptInputView: View {
             }
         }
         
-        // Debugging: Print detected prices and text candidates with their coordinates
-        print("Detected Prices with Coordinates:")
-        for price in priceCandidates {
-            print("Text: \(price.text), Coordinates: \(price.box)")
-        }
-        
-        print("\nDetected Texts with Coordinates:")
-        for text in textCandidates {
-            print("Text: \(text.text), Coordinates: \(text.box)")
-        }
-        
-        // Step 2: Match items to prices based on closest X-value
+        // Match items to prices based on closest X-value
         for price in priceCandidates {
             if let matchingText = textCandidates.min(by: { lhs, rhs in
                 // Compare the absolute difference in X-coordinates
@@ -181,14 +170,8 @@ struct ReceiptInputView: View {
                 }
             }
         }
-        
-        // Debug final parsed items
-        print("\nFinal Parsed Items:")
-        items.forEach { print("Item: \($0.name), Price: \($0.cost)") }
-        
         return items
     }
-
 }
 
 extension UIImage {

@@ -6,15 +6,23 @@ struct ItemRow: View {
     let onTap: () -> Void
 
     var body: some View {
-        HStack {
+        VStack(spacing: 8) {
             Text(item.name)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .lineLimit(nil) // Allow multiple lines
+                .fixedSize(horizontal: false, vertical: true) // Enable wrapping
+                .frame(maxWidth: .infinity)
+
             Text("$\(item.cost, specifier: "%.2f")")
                 .foregroundColor(.green)
+                .font(.subheadline)
         }
         .padding()
-        .background(isSelected ? Color.blue.opacity(0.2) : Color.secondary.opacity(0.1))
-        .cornerRadius(10)
+        .frame(width: 160, height: 110) // Make it slightly larger
+        .background(isSelected ? Color.blue.opacity(0.2) : Color.white)
+        .cornerRadius(15)
+        .shadow(color: .gray.opacity(0.3), radius: 4, x: 0, y: 2)
         .onTapGesture {
             onTap()
         }

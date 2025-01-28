@@ -6,10 +6,6 @@ struct ResultView: View {
 
     var body: some View {
         VStack {
-            Text("Shares Breakdown")
-                .font(.largeTitle)
-                .padding()
-
             ScrollView {
                 ForEach(userShares.keys.sorted(), id: \.self) { user in
                     Section {
@@ -33,7 +29,7 @@ struct ResultView: View {
                                 .padding(.vertical, 5)
 
                             HStack {
-                                Text("Total Share")
+                                Text("Total")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 Text("$\(userShares[user] ?? 0.0, specifier: "%.2f")")
@@ -58,7 +54,7 @@ struct ResultView: View {
             .buttonStyle(.borderedProminent)
             .padding()
         }
-        .navigationTitle("Results")
+        .navigationTitle("Breakdown")
         .padding()
     }
 }

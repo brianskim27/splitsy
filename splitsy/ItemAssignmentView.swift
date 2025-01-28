@@ -12,97 +12,130 @@ struct ItemAssignmentView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
-                // Add new user section
+            VStack(spacing: 10) {
+                // 👤 Add new user section
                 HStack {
                     TextField("Enter new user name", text: $newUserName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                    
                     Button("Add User") {
                         addUser()
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.borderedProminent)
                 }
-                .padding()
+                .padding(.horizontal)
 
+                // 🛑 Error Message
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
-                        .padding(.bottom)
+                        .bold()
+                        .padding(.bottom, 5)
                 }
 
-                // Main assignment view
-                HStack {
-                    // Items list
-                    VStack {
-                        HStack {
-                            Text("Items")
-                                .font(.headline)
-                            Spacer()
-                            Button(action: toggleSelectAll) {
-                                Text(selectedItems.count == items.count ? "Deselect All" : "Select All")
-                                    .foregroundColor(.blue)
+                // 📌 Items & Users Section
+                ScrollView {
+                    VStack(spacing: 15) {
+                        HStack(alignment: .top, spacing: 20) {
+                            
+                            // 🛍️ Items List
+                            VStack {
+                                HStack {
+                                    Text("Items")
+                                        .font(.headline)
+                                        .bold()
+                                        .frame(maxWidth: .infinity, alignment: .center) // Center Title
+                                        .padding(.bottom, 5)
+                                    Spacer()
+                                }
+                                .padding(.horizontal)
+
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 15)], spacing: 15) {
+                                    ForEach(items, id: \.id) { item in
+                                        let isSelected = selectedItems.contains(where: { $0.id == item.id })
+                                        ItemRow(
+                                            item: item,
+                                            isSelected: isSelected,
+                                            onTap: { toggleSelection(for: item) }
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal)
                             }
+                            .frame(maxWidth: 400, minHeight: 300)
+
+                            // 👥 Users List
+                            VStack {
+                                HStack {
+                                    Text("Users")
+                                        .font(.headline)
+                                        .bold()
+                                        .frame(maxWidth: .infinity, alignment: .center) // Center Title
+                                        .padding(.bottom, 5)
+                                    Spacer()
+                                }
+                                .padding(.horizontal)
+
+                                LazyVGrid(columns: [GridItem(.flexible(), spacing: 20)], spacing: 15) {
+                                    ForEach(users.indices, id: \.self) { index in
+                                        UserCard(
+                                            user: users[index],
+                                            items: items,
+                                            onAssign: { assignSelectedItems(to: users[index]) },
+                                            onUnassign: { item in unassignItem(item, from: users[index]) }
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                            .frame(maxWidth: .infinity)
                         }
                         .padding(.horizontal)
-
-                        List {
-                            ForEach(items, id: \.id) { item in
-                                let isSelected = selectedItems.contains(where: { $0.id == item.id })
-                                ItemRow(
-                                    item: item,
-                                    isSelected: isSelected,
-                                    onTap: { toggleSelection(for: item) }
-                                )
-                            }
-                        }
-                        .frame(maxWidth: 200)
                     }
+                    .padding(.bottom, 20) // ✅ Prevents last item from being cut off
+                }
+            }
+            .safeAreaInset(edge: .bottom) { // Keeps the button anchored at the bottom
+                VStack(spacing: 5) {
+                    // Solid background prevents content from showing through
+                    Color.white
+                        .frame(height: 30) // Adjust height to fully cover any items underneath
 
-                    // Users list
-                    VStack {
-                        Text("Users")
+                    NavigationLink(
+                        destination: ResultView(userShares: userShares, detailedBreakdown: detailedBreakdown),
+                        isActive: $isResultViewActive
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
+
+                    Button(action: {
+                        let (shares, breakdown) = calculateUserShares()
+                        userShares = shares
+                        detailedBreakdown = breakdown
+                        isResultViewActive = true
+                    }) {
+                        Text("Calculate Shares")
                             .font(.headline)
-                            .padding(.bottom)
-
-                        ScrollView {
-                            ForEach(users.indices, id: \.self) { index in
-                                UserRow(
-                                    user: users[index],
-                                    items: items,
-                                    onAssign: { assignSelectedItems(to: users[index]) },
-                                    onUnassign: { item in unassignItem(item, from: users[index]) }
-                                )
-                            }
-                        }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal)
                 }
-
-                // NavigationLink to ResultView
-                NavigationLink(
-                    destination: ResultView(userShares: userShares, detailedBreakdown: detailedBreakdown),
-                    isActive: $isResultViewActive
-                ) {
-                    EmptyView()
-                }
-                .hidden()
-
-                // Calculate and navigate
-                Button("Calculate Shares") {
-                    let (shares, breakdown) = calculateUserShares()
-                    userShares = shares
-                    detailedBreakdown = breakdown
-                    isResultViewActive = true
-                }
-                .buttonStyle(.borderedProminent)
-                .padding(.top)
+                .background(Color.white.edgesIgnoringSafeArea(.bottom)) // Ensures a solid footer
             }
             .navigationTitle("Assign Items")
-            .padding()
         }
     }
 
-    // Add a new user
+    // 🔹 Add User Logic
     private func addUser() {
         guard !newUserName.isEmpty else {
             errorMessage = "User name cannot be empty."
@@ -119,6 +152,7 @@ struct ItemAssignmentView: View {
         errorMessage = nil
     }
 
+    // 🔹 Select/Deselect Items
     private func toggleSelection(for item: ReceiptItem) {
         if let index = selectedItems.firstIndex(where: { $0.id == item.id }) {
             selectedItems.remove(at: index)
@@ -128,13 +162,10 @@ struct ItemAssignmentView: View {
     }
 
     private func toggleSelectAll() {
-        if selectedItems.count == items.count {
-            selectedItems.removeAll()
-        } else {
-            selectedItems = items
-        }
+        selectedItems = selectedItems.count == items.count ? [] : items
     }
 
+    // 🔹 Assign Selected Items to a User
     private func assignSelectedItems(to user: User) {
         guard !selectedItems.isEmpty else {
             errorMessage = "No items selected."
@@ -157,6 +188,7 @@ struct ItemAssignmentView: View {
         }
     }
 
+    // 🔹 Unassign an Item from a User
     private func unassignItem(_ item: ReceiptItem, from user: User) {
         if let userIndex = users.firstIndex(where: { $0.id == user.id }) {
             if let itemIDIndex = users[userIndex].assignedItemIDs.firstIndex(of: item.id) {
@@ -171,6 +203,7 @@ struct ItemAssignmentView: View {
         }
     }
 
+    // 🔹 Calculate User Shares
     private func calculateUserShares() -> (shares: [String: Double], breakdown: [String: [(item: String, cost: Double)]]) {
         var userShares: [String: Double] = [:]
         var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]
@@ -182,17 +215,13 @@ struct ItemAssignmentView: View {
             for itemID in user.assignedItemIDs {
                 if let item = items.first(where: { $0.id == itemID }) {
                     if item.assignedUsers.count > 0 {
-                        // Calculate split cost
                         let splitCost = round((item.cost / Double(item.assignedUsers.count)) * 100) / 100
                         totalCost += splitCost
-
-                        // Add item to user’s detailed breakdown
                         userBreakdown.append((item: item.name, cost: splitCost))
                     }
                 }
             }
 
-            // Store user’s total cost and detailed breakdown
             userShares[user.name] = round(totalCost * 100) / 100
             detailedBreakdown[user.name] = userBreakdown
         }
