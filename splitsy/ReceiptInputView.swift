@@ -6,13 +6,13 @@ struct ReceiptInputView: View {
     @State private var receiptImage: UIImage? = nil
     @State private var parsedItems: [ReceiptItem] = [] // Parsed items
     @State private var detectedTexts: [(id: UUID, text: String, box: CGRect)] = [] // Detected texts with unique IDs
-    @State private var isPickerPresented = false
+    @State private var isPickerPresented = false // Open picker at start
     @State private var isNavigatingToAssignmentView = false // Tracks navigation
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                // 📸 Receipt Image
+                // 📸 Receipt Image Display
                 ZStack {
                     if let receiptImage {
                         Image(uiImage: receiptImage)
@@ -22,12 +22,14 @@ struct ReceiptInputView: View {
                             .cornerRadius(12)
                             .shadow(radius: 8)
                     } else {
-                        Text("Tap to Upload or Take a Receipt Photo")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity, minHeight: 300)
-                            .background(Color.secondary.opacity(0.1))
+                        Color.secondary.opacity(0.1)
+                            .frame(height: 300)
                             .cornerRadius(12)
+                            .overlay(
+                                Text("Tap to Upload or Take a Receipt Photo")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                            )
                             .onTapGesture {
                                 isPickerPresented = true
                             }
@@ -36,7 +38,7 @@ struct ReceiptInputView: View {
                 .frame(height: 300)
                 .padding(.horizontal)
 
-                // 🛒 Swipe-to-Remove Items List (Fix: Use List Instead of ScrollView)
+                // 🛒 Parsed Items List
                 if !parsedItems.isEmpty {
                     List {
                         ForEach(parsedItems, id: \.id) { item in
@@ -53,71 +55,83 @@ struct ReceiptInputView: View {
                             }
                             .padding(.vertical, 8)
                         }
-                        .onDelete(perform: removeItem) // ✅ Native swipe-to-delete
+                        .onDelete(perform: removeItem)
                     }
-                    .listStyle(PlainListStyle()) // ✅ Modern look
+                    .listStyle(PlainListStyle())
                     .frame(maxHeight: 350)
                 }
 
-                // 🔹 Buttons Section
                 Spacer()
-                HStack(spacing: 20) {
-                    // 🔍 Analyze Receipt Button
-                    Button(action: {
-                        if let image = receiptImage {
-                            analyzeReceiptImage(image)
+            }
+            .padding(.bottom, 20)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                // 🔙 Back Button (Only Visible After Selection)
+                if receiptImage != nil {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: {
+                            receiptImage = nil // Reset image
+                            parsedItems.removeAll() // Clear parsed items
+                            isPickerPresented = true // Reopen picker
+                        }) {
+                            HStack {
+                                Image(systemName: "chevron.left")
+                                Text("Back")
+                            }
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.blue)
                         }
-                    }) {
-                        Image(systemName: "magnifyingglass") // 🔍 Icon for analyzing
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(receiptImage == nil ? Color.gray.opacity(0.5) : Color.blue)
-                            .clipShape(Circle()) // Make it circular
-                            .shadow(radius: 5)
                     }
-                    .disabled(receiptImage == nil)
+                }
 
-                    // 🚀 Navigation Link to Assignment View
-                    NavigationLink(
-                        destination: ItemAssignmentView(items: parsedItems),
-                        isActive: $isNavigatingToAssignmentView
-                    ) {
-                        EmptyView()
-                    }
-                    .hidden()
+                // 🏷️ Title
+                ToolbarItem(placement: .principal) {
+                    Text("Analyze Receipt")
+                        .font(.headline)
+                        .bold()
+                }
 
-                    // ➡️ Proceed to Assign Items Button
+                // ➡️ Next Button
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         isNavigatingToAssignmentView = true
                     }) {
-                        Image(systemName: "arrow.right.circle.fill") // ➡️ Icon for navigation
-                            .font(.system(size: 20)) // Bigger icon
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(parsedItems.isEmpty ? Color.gray.opacity(0.5) : Color.blue)
-                            .clipShape(Circle()) // Circular button
-                            .shadow(radius: 5)
+                        HStack {
+                            Text("Next")
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(isNextButtonEnabled ? .blue : .gray)
+                        .opacity(isNextButtonEnabled ? 1.0 : 0.5)
                     }
-                    .disabled(parsedItems.isEmpty)
+                    .disabled(!isNextButtonEnabled)
                 }
-                .padding(.horizontal)
             }
-            .padding(.bottom, 20)
-            .navigationTitle("Receipt Input")
-            .sheet(isPresented: $isPickerPresented) {
+            .navigationDestination(isPresented: $isNavigatingToAssignmentView) {
+                ItemAssignmentView(items: parsedItems)
+            }
+            .sheet(isPresented: $isPickerPresented, onDismiss: {
+                if let image = receiptImage {
+                    analyzeReceiptImage(image) // 📌 Auto-analyze after selection
+                }
+            }) {
                 ImagePicker(image: $receiptImage)
             }
         }
     }
     
+    // ✅ Next button enabled only if there are parsed items
+    private var isNextButtonEnabled: Bool {
+        return !parsedItems.isEmpty
+    }
+
     // 🗑 Remove Item
     private func removeItem(at offsets: IndexSet) {
         parsedItems.remove(atOffsets: offsets)
     }
 
-    
-    // 🔍 Analyze Receipt with OCR
+    // 🔍 Analyze Receipt with OCR (Automatically triggered)
     private func analyzeReceiptImage(_ image: UIImage) {
         var correctedImage = image
         if image.size.width > image.size.height {
@@ -159,7 +173,7 @@ struct ReceiptInputView: View {
             }
         }
     }
-    
+
     // 🏷️ Group Items & Prices from OCR Data
     private func groupItemsAndPrices(detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
         var items: [ReceiptItem] = []

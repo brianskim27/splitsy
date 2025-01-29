@@ -1,0 +1,38 @@
+{
+  "configurations" : [
+    {
+      "id" : "FA32BD97-FCED-4EB3-A5F1-50E6FBB4012B",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "areLocalizationScreenshotsEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:splitsy.xcodeproj",
+      "identifier" : "D3D10A592CDDB75E00252FA8",
+      "name" : "splitsy"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:splitsy.xcodeproj",
+        "identifier" : "D3D10A692CDDB76000252FA8",
+        "name" : "splitsyTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:splitsy.xcodeproj",
+        "identifier" : "D3D10A732CDDB76000252FA8",
+        "name" : "splitsyUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -4,7 +4,7 @@ import SwiftUI
 struct splitsyApp: App {
     var body: some Scene {
         WindowGroup {
-            ReceiptInputView()
+            MainTabView()
         }
     }
 }
