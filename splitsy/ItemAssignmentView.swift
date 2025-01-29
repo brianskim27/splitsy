@@ -3,12 +3,13 @@ import SwiftUI
 struct ItemAssignmentView: View {
     @State var items: [ReceiptItem] // Items to assign
     @State private var users: [User] = []
-    @State private var selectedItems: [ReceiptItem] = [] // Track selected items
+    @State private var selectedItems: [ReceiptItem] = []
     @State private var newUserName: String = ""
     @State private var errorMessage: String? = nil
-    @State private var userShares: [String: Double] = [:] // Stores calculated shares
-    @State private var isResultViewActive = false // Controls navigation to ResultView
+    @State private var userShares: [String: Double] = [:]
+    @State private var isResultViewActive = false
     @State private var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]
+    @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
         NavigationStack {
@@ -22,10 +23,13 @@ struct ItemAssignmentView: View {
                         .background(Color(.systemGray6))
                         .cornerRadius(8)
                     
-                    Button("Add User") {
+                    Button(action: {
                         addUser()
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2) // Slightly bigger than default
+                            .foregroundColor(.blue)
                     }
-                    .buttonStyle(.borderedProminent)
                 }
                 .padding(.horizontal)
 
@@ -44,15 +48,11 @@ struct ItemAssignmentView: View {
                             
                             // 🛍️ Items List
                             VStack {
-                                HStack {
-                                    Text("Items")
-                                        .font(.headline)
-                                        .bold()
-                                        .frame(maxWidth: .infinity, alignment: .center) // Center Title
-                                        .padding(.bottom, 5)
-                                    Spacer()
-                                }
-                                .padding(.horizontal)
+                                Text("Items")
+                                    .font(.headline)
+                                    .bold()
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.bottom, 5)
 
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 15)], spacing: 15) {
                                     ForEach(items, id: \.id) { item in
@@ -70,15 +70,11 @@ struct ItemAssignmentView: View {
 
                             // 👥 Users List
                             VStack {
-                                HStack {
-                                    Text("Users")
-                                        .font(.headline)
-                                        .bold()
-                                        .frame(maxWidth: .infinity, alignment: .center) // Center Title
-                                        .padding(.bottom, 5)
-                                    Spacer()
-                                }
-                                .padding(.horizontal)
+                                Text("Users")
+                                    .font(.headline)
+                                    .bold()
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.bottom, 5)
 
                                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 20)], spacing: 15) {
                                     ForEach(users.indices, id: \.self) { index in
@@ -96,54 +92,72 @@ struct ItemAssignmentView: View {
                         }
                         .padding(.horizontal)
                     }
-                    .padding(.bottom, 20) // ✅ Prevents last item from being cut off
+                    .padding(.bottom, 20) // Prevents last item from being cut off
                 }
             }
-            .safeAreaInset(edge: .bottom) { // Keeps the button anchored at the bottom
-                VStack(spacing: 5) {
-                    // Solid background prevents content from showing through
-                    Color.white
-                        .frame(height: 30) // Adjust height to fully cover any items underneath
-
-                    NavigationLink(
-                        destination: ResultView(userShares: userShares, detailedBreakdown: detailedBreakdown),
-                        isActive: $isResultViewActive
-                    ) {
-                        EmptyView()
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss() // Dismiss the current view
+                    }) {
+                        HStack {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.blue)
                     }
-                    .hidden()
+                }
 
+                ToolbarItem(placement: .principal) {
+                    Text("Assign Items")
+                        .font(.headline)
+                        .bold()
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         let (shares, breakdown) = calculateUserShares()
                         userShares = shares
                         detailedBreakdown = breakdown
                         isResultViewActive = true
                     }) {
-                        Text("Calculate Shares")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                        HStack {
+                            Text("Next")
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(isNextButtonEnabled ? .blue : .gray) // Gray when disabled
+                        .opacity(isNextButtonEnabled ? 1.0 : 0.5) // Reduce opacity when disabled
                     }
-                    .padding(.horizontal)
+                    .disabled(!isNextButtonEnabled) // Disable button when no assignments
                 }
-                .background(Color.white.edgesIgnoringSafeArea(.bottom)) // Ensures a solid footer
             }
-            .navigationTitle("Assign Items")
+
+            // 🚀 Hidden Navigation to Results View
+            NavigationLink(
+                destination: ResultView(userShares: userShares, detailedBreakdown: detailedBreakdown),
+                isActive: $isResultViewActive
+            ) {
+                EmptyView()
+            }
+            .hidden()
         }
     }
-
+    
+    private var isNextButtonEnabled: Bool {
+        return users.contains { !$0.assignedItemIDs.isEmpty }
+    }
+    
     // 🔹 Add User Logic
     private func addUser() {
         guard !newUserName.isEmpty else {
-            errorMessage = "User name cannot be empty."
             return
         }
 
         guard !users.contains(where: { $0.name == newUserName }) else {
-            errorMessage = "User with the same name already exists."
             return
         }
 
@@ -168,7 +182,6 @@ struct ItemAssignmentView: View {
     // 🔹 Assign Selected Items to a User
     private func assignSelectedItems(to user: User) {
         guard !selectedItems.isEmpty else {
-            errorMessage = "No items selected."
             return
         }
 

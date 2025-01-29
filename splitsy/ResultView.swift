@@ -4,6 +4,8 @@ struct ResultView: View {
     let userShares: [String: Double]
     let detailedBreakdown: [String: [(item: String, cost: Double)]] // Detailed breakdown for each user
 
+    @Environment(\.dismiss) var dismiss // Dismiss action for navigation
+    
     var body: some View {
         VStack {
             ScrollView {
@@ -47,14 +49,28 @@ struct ResultView: View {
             .padding()
 
             Spacer()
-
-            Button("Go Back") {
-                // Logic to dismiss the screen or navigate back
-            }
-            .buttonStyle(.borderedProminent)
-            .padding()
         }
-        .navigationTitle("Breakdown")
-        .padding()
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true) // Hide default back button
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss() // Go back
+                }) {
+                    HStack {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.blue)
+                }
+            }
+
+            ToolbarItem(placement: .principal) {
+                Text("Breakdown")
+                    .font(.headline)
+                    .bold()
+            }
+        }
     }
 }

@@ -19,7 +19,7 @@ struct ItemRow: View {
                 .font(.subheadline)
         }
         .padding()
-        .frame(width: 160, height: 110) // Make it slightly larger
+        .frame(width: 160, height: 110)
         .background(isSelected ? Color.blue.opacity(0.2) : Color.white)
         .cornerRadius(15)
         .shadow(color: .gray.opacity(0.3), radius: 4, x: 0, y: 2)

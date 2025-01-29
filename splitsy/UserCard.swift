@@ -9,7 +9,7 @@ struct UserCard: View {
     var body: some View {
         VStack(spacing: 10) {
             
-            // 🏷 User Name Button with Gradient
+            // User Name Button with Gradient
             Button(action: onAssign) {
                 Text(user.name)
                     .font(.headline)
@@ -27,7 +27,7 @@ struct UserCard: View {
                     .cornerRadius(12)
             }
             
-            // 📦 Assigned Items in Rounded Pills
+            // Assigned Items in Rounded Pills
             VStack(spacing: 5) {
                 VStack {
                     ForEach(user.assignedItemIDs, id: \.self) { itemID in
