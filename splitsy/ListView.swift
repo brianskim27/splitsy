@@ -7,7 +7,7 @@ struct ListView: View {
     var body: some View {
         NavigationStack {
             List {
-                // ⭐ Favorited Stores Section
+                // Favorited Stores Section
                 if !favoritedStores.isEmpty {
                     Section(header: Text("Favorited Stores").font(.headline)) {
                         ForEach(favoritedStores, id: \.self) { store in
@@ -27,7 +27,7 @@ struct ListView: View {
                     }
                 }
 
-                // 🕰️ Recent Stores Section
+                // Recent Stores Section
                 if !recentStores.isEmpty {
                     Section(header: Text("Recent Stores").font(.headline)) {
                         ForEach(recentStores, id: \.self) { store in
@@ -48,13 +48,13 @@ struct ListView: View {
         }
     }
 
-    // 📥 Load Favorited & Recent Stores
+    // Load Favorited & Recent Stores
     private func loadStoredData() {
         favoritedStores = UserDefaults.standard.stringArray(forKey: "favoritedStores") ?? []
         recentStores = UserDefaults.standard.stringArray(forKey: "recentStores") ?? []
     }
 
-    // ❌ Remove a Store from Favorites
+    // Remove a Store from Favorites
     private func removeFavorite(_ store: String) {
         favoritedStores.removeAll { $0 == store }
         UserDefaults.standard.set(favoritedStores, forKey: "favoritedStores")

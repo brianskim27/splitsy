@@ -23,10 +23,10 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         }
 
         switch status {
-        case .notDetermined:
+        case .notDetermined:    
             locationManager.requestWhenInUseAuthorization()
         case .restricted, .denied:
-            print("⚠️ Location access denied. Prompt user to enable it in Settings.")
+            print("Location access denied. Prompt user to enable it in Settings.")
             completion(nil)
         case .authorizedWhenInUse, .authorizedAlways:
             locationManager.requestLocation()
@@ -39,7 +39,7 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         if status == .authorizedWhenInUse || status == .authorizedAlways {
             locationManager.requestLocation()
         } else if status == .denied {
-            print("⚠️ Location permission denied.")
+            print("Location permission denied.")
             completion?(nil)
         }
     }
@@ -51,7 +51,7 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("❌ Failed to get location: \(error.localizedDescription)")
+        print("Failed to get location: \(error.localizedDescription)")
         completion?(nil)
     }
 }

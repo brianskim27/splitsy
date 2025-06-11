@@ -14,7 +14,7 @@ struct ItemAssignmentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 10) {
-                // 👤 Add new user section
+                // Add new user section
                 HStack {
                     TextField("Enter new user name", text: $newUserName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -33,7 +33,7 @@ struct ItemAssignmentView: View {
                 }
                 .padding(.horizontal)
 
-                // 🛑 Error Message
+                // Error Message
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -41,7 +41,7 @@ struct ItemAssignmentView: View {
                         .padding(.bottom, 5)
                 }
 
-                // 📌 Items & Users Section
+                // Items & Users Section
                 ScrollView {
                     VStack(spacing: 15) {
                         HStack(alignment: .top, spacing: 20) {
@@ -136,7 +136,7 @@ struct ItemAssignmentView: View {
                 }
             }
 
-            // 🚀 Hidden Navigation to Results View
+            // Hidden Navigation to Results View
             NavigationLink(
                 destination: ResultView(userShares: userShares, detailedBreakdown: detailedBreakdown),
                 isActive: $isResultViewActive
@@ -151,7 +151,7 @@ struct ItemAssignmentView: View {
         return users.contains { !$0.assignedItemIDs.isEmpty }
     }
     
-    // 🔹 Add User Logic
+    // Add User Logic
     private func addUser() {
         guard !newUserName.isEmpty else {
             return
@@ -166,7 +166,7 @@ struct ItemAssignmentView: View {
         errorMessage = nil
     }
 
-    // 🔹 Select/Deselect Items
+    // Select/Deselect Items
     private func toggleSelection(for item: ReceiptItem) {
         if let index = selectedItems.firstIndex(where: { $0.id == item.id }) {
             selectedItems.remove(at: index)
@@ -179,7 +179,7 @@ struct ItemAssignmentView: View {
         selectedItems = selectedItems.count == items.count ? [] : items
     }
 
-    // 🔹 Assign Selected Items to a User
+    // Assign Selected Items to a User
     private func assignSelectedItems(to user: User) {
         guard !selectedItems.isEmpty else {
             return
@@ -201,7 +201,7 @@ struct ItemAssignmentView: View {
         }
     }
 
-    // 🔹 Unassign an Item from a User
+    // Unassign an Item from a User
     private func unassignItem(_ item: ReceiptItem, from user: User) {
         if let userIndex = users.firstIndex(where: { $0.id == user.id }) {
             if let itemIDIndex = users[userIndex].assignedItemIDs.firstIndex(of: item.id) {
@@ -216,7 +216,7 @@ struct ItemAssignmentView: View {
         }
     }
 
-    // 🔹 Calculate User Shares
+    // Calculate User Shares
     private func calculateUserShares() -> (shares: [String: Double], breakdown: [String: [(item: String, cost: Double)]]) {
         var userShares: [String: Double] = [:]
         var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]

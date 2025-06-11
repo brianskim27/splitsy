@@ -12,7 +12,7 @@ struct ReceiptInputView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                // 📸 Receipt Image Display
+                // Receipt Image Display
                 ZStack {
                     if let receiptImage {
                         Image(uiImage: receiptImage)
@@ -38,7 +38,7 @@ struct ReceiptInputView: View {
                 .frame(height: 300)
                 .padding(.horizontal)
 
-                // 🛒 Parsed Items List
+                // Parsed Items List
                 if !parsedItems.isEmpty {
                     List {
                         ForEach(parsedItems, id: \.id) { item in
@@ -67,7 +67,7 @@ struct ReceiptInputView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                // 🔙 Back Button (Only Visible After Selection)
+                // Back Button (Only Visible After Selection)
                 if receiptImage != nil {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: {
@@ -85,14 +85,14 @@ struct ReceiptInputView: View {
                     }
                 }
 
-                // 🏷️ Title
+                // Title
                 ToolbarItem(placement: .principal) {
                     Text("Analyze Receipt")
                         .font(.headline)
                         .bold()
                 }
 
-                // ➡️ Next Button
+                // Next Button
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         isNavigatingToAssignmentView = true
@@ -113,7 +113,7 @@ struct ReceiptInputView: View {
             }
             .sheet(isPresented: $isPickerPresented, onDismiss: {
                 if let image = receiptImage {
-                    analyzeReceiptImage(image) // 📌 Auto-analyze after selection
+                    analyzeReceiptImage(image) // Auto-analyze after selection
                 }
             }) {
                 ImagePicker(image: $receiptImage)
@@ -121,17 +121,17 @@ struct ReceiptInputView: View {
         }
     }
     
-    // ✅ Next button enabled only if there are parsed items
+    // Next button enabled only if there are parsed items
     private var isNextButtonEnabled: Bool {
         return !parsedItems.isEmpty
     }
 
-    // 🗑 Remove Item
+    // Remove Item
     private func removeItem(at offsets: IndexSet) {
         parsedItems.remove(atOffsets: offsets)
     }
 
-    // 🔍 Analyze Receipt with OCR (Automatically triggered)
+    // Analyze Receipt with OCR (Automatically triggered)
     private func analyzeReceiptImage(_ image: UIImage) {
         var correctedImage = image
         if image.size.width > image.size.height {
@@ -174,8 +174,97 @@ struct ReceiptInputView: View {
         }
     }
 
-    // 🏷️ Group Items & Prices from OCR Data
+    // Group Items & Prices from OCR Data
     private func groupItemsAndPrices(detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
+        let allText = detectedTexts.map { $0.text }.joined(separator: " ").lowercased()
+        if allText.contains("walmart") {
+            print("walmart")
+            print("=== OCR lines for Walmart ===")
+            for (i, text) in detectedTexts.map({ $0.text }).enumerated() {
+                print("\(i): \(text)")
+            }
+            return parseWalmartReceipt(detectedTexts)
+        } else if allText.contains("bj's") || allText.contains("bjs") {
+            print("bjs")
+            return parseBJsReceipt(detectedTexts)
+        } else {
+            return parseDefaultReceipt(detectedTexts)
+        }
+    }
+    
+    // Parse Walmart receipt
+    private func parseWalmartReceipt(_ detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
+        let priceRegex = try! NSRegularExpression(pattern: #"(\d+[.,]\d{2})(?:\s*[A-Z0-9]*)?$"#, options: [.caseInsensitive])
+        let codeWithNameRegex = try! NSRegularExpression(pattern: #"^(.+?)\s+(\d{6,}.*F?)$"#)
+        let codeOnlyRegex = try! NSRegularExpression(pattern: #"^\d{6,}.*F?$"#)
+        let letterRegex = try! NSRegularExpression(pattern: #"[A-Za-z]"#)
+        let ignoreKeywords = [
+            "total", "subtotal", "tax", "change", "due", "purchase", "tend", "card", "debit", "credit", "savings", "deposit",
+            "st#", "op#", "tr#", "tc#", "items sold"
+        ]
+
+        let texts = detectedTexts.map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+        var items: [ReceiptItem] = []
+        var itemNameQueue: [String] = []
+        var inProductSection = false
+
+        for (i, text) in texts.enumerated() {
+            let lower = text.lowercased()
+            if ignoreKeywords.contains(where: { lower.contains($0) }) { continue }
+
+            // Detect start of product section
+            if !inProductSection {
+                if let _ = codeWithNameRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) {
+                    inProductSection = true
+                } else if
+                    letterRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) != nil,
+                    i+1 < texts.count,
+                    codeOnlyRegex.firstMatch(in: texts[i+1], options: [], range: NSRange(texts[i+1].startIndex..., in: texts[i+1])) != nil {
+                    inProductSection = true
+                }
+                if !inProductSection { continue }
+            }
+
+            // If line has both name and code
+            if let match = codeWithNameRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)),
+               let nameRange = Range(match.range(at: 1), in: text) {
+                let name = String(text[nameRange]).trimmingCharacters(in: .whitespaces)
+                itemNameQueue.append(name)
+                continue
+            }
+
+            // If line is a price, pair with first item in queue
+            if let match = priceRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)),
+               let swiftRange = Range(match.range(at: 1), in: text),
+               !itemNameQueue.isEmpty {
+                let priceString = String(text[swiftRange]).replacingOccurrences(of: ",", with: ".")
+                if let price = Double(priceString) {
+                    let name = itemNameQueue.removeFirst()
+                    items.append(ReceiptItem(name: name, cost: price))
+                }
+                continue
+            }
+
+            // If line is just a name (not a code, not a price)
+            if letterRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) != nil &&
+                codeOnlyRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) == nil &&
+                priceRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) == nil {
+                itemNameQueue.append(text)
+                continue
+            }
+        }
+        return items
+    }
+
+    // Parse BJs receipt
+    private func parseBJsReceipt(_ detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
+        // TODO: Implement BJ's-specific parsing logic
+        return []
+    }
+
+    // Parse normal receipt
+    private func parseDefaultReceipt(_ detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
+        // Use your original logic here
         var items: [ReceiptItem] = []
         let priceRegex = try! NSRegularExpression(pattern: #"^\$?\s*(\d+[.,]\d{2})$"#)
         
@@ -204,6 +293,30 @@ struct ReceiptInputView: View {
             }
         }
         return items
+    }
+
+    private func reconstructLinesWithFragments(from detectedTexts: [(text: String, box: CGRect)]) -> [[(text: String, box: CGRect)]] {
+        let sorted = detectedTexts.sorted {
+            abs($0.box.midY - $1.box.midY) < 0.005
+                ? $0.box.minX < $1.box.minX
+                : $0.box.midY < $1.box.midY
+        }
+        var lines: [[(text: String, box: CGRect)]] = []
+        var currentLine: [(text: String, box: CGRect)] = []
+        var lastY: CGFloat? = nil
+        let yThreshold: CGFloat = 0.015
+
+        for frag in sorted {
+            if let lastY = lastY, abs(frag.box.midY - lastY) > yThreshold {
+                if !currentLine.isEmpty { lines.append(currentLine) }
+                currentLine = [frag]
+            } else {
+                currentLine.append(frag)
+            }
+            lastY = frag.box.midY
+        }
+        if !currentLine.isEmpty { lines.append(currentLine) }
+        return lines
     }
 }
 
