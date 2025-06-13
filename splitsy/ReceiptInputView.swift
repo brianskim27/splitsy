@@ -178,14 +178,18 @@ struct ReceiptInputView: View {
     private func groupItemsAndPrices(detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
         let allText = detectedTexts.map { $0.text }.joined(separator: " ").lowercased()
         if allText.contains("walmart") {
-            print("walmart")
-            print("=== OCR lines for Walmart ===")
-            for (i, text) in detectedTexts.map({ $0.text }).enumerated() {
-                print("\(i): \(text)")
-            }
+//            print("walmart")
+//            print("=== OCR lines for Walmart ===")
+//            for (i, text) in detectedTexts.map({ $0.text }).enumerated() {
+//                print("\(i): \(text)")
+//            }
             return parseWalmartReceipt(detectedTexts)
         } else if allText.contains("bj's") || allText.contains("bjs") {
-            print("bjs")
+//            print("bjs")
+//            print("=== OCR lines for BJs ===")
+//            for (i, text) in detectedTexts.map({ $0.text }).enumerated() {
+//                print("\(i): \(text)")
+//            }
             return parseBJsReceipt(detectedTexts)
         } else {
             return parseDefaultReceipt(detectedTexts)
@@ -258,8 +262,88 @@ struct ReceiptInputView: View {
 
     // Parse BJs receipt
     private func parseBJsReceipt(_ detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
-        // TODO: Implement BJ's-specific parsing logic
-        return []
+        let priceRegex = try! NSRegularExpression(pattern: #"(\d+[.,]\d{2})\s*[A-Z]?$"#, options: [.caseInsensitive])
+        let codeRegex = try! NSRegularExpression(pattern: #"^\d{7,}$"#) // 7+ digit code
+        let letterRegex = try! NSRegularExpression(pattern: #"[A-Za-z]"#)
+        let ignoreKeywords = [
+            "change", "due", "purchase", "tend", "card", "debit", "credit", "savings", "st#",
+            "op#", "tr#", "tc#", "items sold", "entry", "approved", "auth", "terminal", "number", "aid", "verified", "by pin"
+        ]
+
+        let texts = detectedTexts.map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+        var items: [ReceiptItem] = []
+        var inProductSection = false
+        var itemNameQueue: [String] = []
+        var pendingNameLines: [String] = []
+
+        for (_, text) in texts.enumerated() {
+            let lower = text.lowercased()
+            if ignoreKeywords.contains(where: { lower.contains($0) }) { continue }
+            if text.isEmpty { continue }
+
+            // Start product section at first code line
+            if !inProductSection {
+                if codeRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) != nil {
+                    inProductSection = true
+                } else {
+                    continue
+                }
+            }
+
+            // Before handling subtotal/tax/total, flush any pending name lines as an item
+            if (lower.contains("subtotal") || lower.contains("tax") || lower.contains("total")) && !pendingNameLines.isEmpty {
+                let name = pendingNameLines.joined(separator: " ")
+                itemNameQueue.append(name)
+                pendingNameLines.removeAll()
+            }
+
+            // If code line, flush any pending name lines as a single item
+            if codeRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) != nil {
+                if !pendingNameLines.isEmpty {
+                    let name = pendingNameLines.joined(separator: " ")
+                    itemNameQueue.append(name)
+                    pendingNameLines.removeAll()
+                }
+                continue
+            }
+
+            // If price line, flush any pending name lines first, then pair with first item in queue
+            if let match = priceRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)),
+               let swiftRange = Range(match.range(at: 1), in: text) {
+                if !pendingNameLines.isEmpty {
+                    let name = pendingNameLines.joined(separator: " ")
+                    itemNameQueue.append(name)
+                    pendingNameLines.removeAll()
+                }
+                if !itemNameQueue.isEmpty {
+                    let priceString = String(text[swiftRange]).replacingOccurrences(of: ",", with: ".")
+                    if let price = Double(priceString) {
+                        let name = itemNameQueue.removeFirst()
+                        if !isProbablyNotItem(name) {
+                            items.append(ReceiptItem(name: name, cost: price))
+                        }
+                    }
+                }
+                continue
+            }
+
+            // If line is just a name (not code, not price)
+            if letterRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) != nil &&
+                codeRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) == nil &&
+                priceRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) == nil {
+                pendingNameLines.append(text)
+                continue
+            }
+        }
+        // Flush any remaining pending name lines (in case the last item has no code after it)
+        if !pendingNameLines.isEmpty {
+            let name = pendingNameLines.joined(separator: " ")
+            if !isProbablyNotItem(name) {
+                itemNameQueue.append(name)
+            }
+            pendingNameLines.removeAll()
+        }
+        return items
     }
 
     // Parse normal receipt
@@ -267,6 +351,7 @@ struct ReceiptInputView: View {
         // Use your original logic here
         var items: [ReceiptItem] = []
         let priceRegex = try! NSRegularExpression(pattern: #"^\$?\s*(\d+[.,]\d{2})$"#)
+        let ignoreKeywords = ["change", "credit", "card"]
         
         var priceCandidates: [(text: String, box: CGRect)] = []
         var textCandidates: [(text: String, box: CGRect)] = []
@@ -317,6 +402,23 @@ struct ReceiptInputView: View {
         }
         if !currentLine.isEmpty { lines.append(currentLine) }
         return lines
+    }
+
+    private func isProbablyNotItem(_ text: String) -> Bool {
+        // Matches date, time, or lines with lots of digits and punctuation
+        let patterns = [
+            #"^\d{1,2}/\d{1,2}/\d{2,4}"#, // date
+            #"\d{1,2}:\d{2}"#,            // time
+            #"pm|am"#,                    // am/pm
+            #"us$"#,                      // ends with US
+            #"^\d{2,}.*[A-Za-z]{2,}"#     // long digit string followed by letters
+        ]
+        for pattern in patterns {
+            if let _ = text.range(of: pattern, options: .regularExpression) {
+                return true
+            }
+        }
+        return false
     }
 }
 
