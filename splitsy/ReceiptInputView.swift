@@ -159,6 +159,9 @@ struct ReceiptInputView: View {
             DispatchQueue.main.async {
                 self.detectedTexts = detectedTexts
                 self.parsedItems = groupItemsAndPrices(detectedTexts: detectedTexts.map { ($0.text, $0.box) })
+                for (i, t) in detectedTexts.enumerated() {
+                    print("OCR[\(i)]: \(t.text)")
+                }
             }
         }
         
@@ -184,7 +187,7 @@ struct ReceiptInputView: View {
 //                print("\(i): \(text)")
 //            }
             return parseWalmartReceipt(detectedTexts)
-        } else if allText.contains("bj's") || allText.contains("bjs") {
+        } else if allText.contains("bj's") || allText.contains("bjs") || allText.contains("bi's") || allText.contains("bis") {
 //            print("bjs")
 //            print("=== OCR lines for BJs ===")
 //            for (i, text) in detectedTexts.map({ $0.text }).enumerated() {
