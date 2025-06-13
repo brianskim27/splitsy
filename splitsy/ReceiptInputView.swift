@@ -3,11 +3,12 @@ import Vision
 import PhotosUI
 
 struct ReceiptInputView: View {
-    @State private var receiptImage: UIImage? = nil
+    @Binding var receiptImage: UIImage?
     @State private var parsedItems: [ReceiptItem] = [] // Parsed items
     @State private var detectedTexts: [(id: UUID, text: String, box: CGRect)] = [] // Detected texts with unique IDs
     @State private var isPickerPresented = false // Open picker at start
     @State private var isNavigatingToAssignmentView = false // Tracks navigation
+    @State private var isCameraPresented = false // Add state for camera
 
     var body: some View {
         NavigationStack {
@@ -26,13 +27,47 @@ struct ReceiptInputView: View {
                             .frame(height: 300)
                             .cornerRadius(12)
                             .overlay(
-                                Text("Tap to Upload or Take a Receipt Photo")
-                                    .font(.headline)
-                                    .foregroundColor(.gray)
+                                VStack(spacing: 24) {
+                                    Text("Analyze Receipt")
+                                        .font(.title2)
+                                        .bold()
+                                        .foregroundColor(Color.primary.opacity(0.8))
+                                    HStack(spacing: 24) {
+                                        Button(action: {
+                                            // Open camera
+                                            isCameraPresented = true
+                                        }) {
+                                            VStack {
+                                                Image(systemName: "camera.fill")
+                                                    .font(.system(size: 32))
+                                                    .foregroundColor(.white)
+                                                    .padding(18)
+                                                    .background(Color.blue)
+                                                    .clipShape(Circle())
+                                                Text("Take Photo")
+                                                    .font(.headline)
+                                                    .foregroundColor(.primary)
+                                            }
+                                        }
+                                        Button(action: {
+                                            // Open photo picker
+                                            isPickerPresented = true
+                                        }) {
+                                            VStack {
+                                                Image(systemName: "photo.on.rectangle")
+                                                    .font(.system(size: 32))
+                                                    .foregroundColor(.white)
+                                                    .padding(18)
+                                                    .background(Color.green)
+                                                    .clipShape(Circle())
+                                                Text("Choose from Gallery")
+                                                    .font(.headline)
+                                                    .foregroundColor(.primary)
+                                            }
+                                        }
+                                    }
+                                }
                             )
-                            .onTapGesture {
-                                isPickerPresented = true
-                            }
                     }
                 }
                 .frame(height: 300)
@@ -111,12 +146,15 @@ struct ReceiptInputView: View {
             .navigationDestination(isPresented: $isNavigatingToAssignmentView) {
                 ItemAssignmentView(items: parsedItems)
             }
+            .sheet(isPresented: $isCameraPresented) {
+                ImagePicker(image: $receiptImage, sourceType: .camera)
+            }
             .sheet(isPresented: $isPickerPresented, onDismiss: {
                 if let image = receiptImage {
                     analyzeReceiptImage(image) // Auto-analyze after selection
                 }
             }) {
-                ImagePicker(image: $receiptImage)
+                ImagePicker(image: $receiptImage, sourceType: .photoLibrary)
             }
         }
     }
