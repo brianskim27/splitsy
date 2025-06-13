@@ -203,7 +203,7 @@ struct ReceiptInputView: View {
         let codeOnlyRegex = try! NSRegularExpression(pattern: #"^\d{6,}.*F?$"#)
         let letterRegex = try! NSRegularExpression(pattern: #"[A-Za-z]"#)
         let ignoreKeywords = [
-            "total", "subtotal", "tax", "change", "due", "purchase", "tend", "card", "debit", "credit", "savings", "deposit",
+            "change", "due", "purchase", "tend", "card", "debit", "credit", "savings", "deposit",
             "st#", "op#", "tr#", "tc#", "items sold"
         ]
 
@@ -211,10 +211,43 @@ struct ReceiptInputView: View {
         var items: [ReceiptItem] = []
         var itemNameQueue: [String] = []
         var inProductSection = false
+        var foundSubtotal = false
+        var foundTax = false
+        var foundTotal = false
 
         for (i, text) in texts.enumerated() {
             let lower = text.lowercased()
             if ignoreKeywords.contains(where: { lower.contains($0) }) { continue }
+
+            // Before handling subtotal/tax/total, flush any pending name lines as an item
+            if (lower.contains("subtotal") && !foundSubtotal) || (lower.contains("tax") && !foundTax) || (lower.contains("total") && !foundTotal) {
+                // Look for price on this line or next line
+                var priceText: String? = nil
+                if let match = priceRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)),
+                   let swiftRange = Range(match.range(at: 1), in: text) {
+                    priceText = String(text[swiftRange]).replacingOccurrences(of: ",", with: ".")
+                } else if i+1 < texts.count {
+                    let nextText = texts[i+1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let match = priceRegex.firstMatch(in: nextText, options: [], range: NSRange(nextText.startIndex..., in: nextText)),
+                       !nextText.lowercased().contains("subtotal") && !nextText.lowercased().contains("total") && !nextText.lowercased().contains("tax") {
+                        priceText = String(nextText[Range(match.range(at: 1), in: nextText)!]).replacingOccurrences(of: ",", with: ".")
+                    }
+                }
+                if let priceString = priceText, let price = Double(priceString) {
+                    if lower.contains("subtotal") && !foundSubtotal {
+                        items.append(ReceiptItem(name: text, cost: price))
+                        foundSubtotal = true
+                    } else if lower.contains("tax") && !foundTax {
+                        items.append(ReceiptItem(name: text, cost: price))
+                        foundTax = true
+                    } else if lower.contains("total") && !foundTotal {
+                        items.append(ReceiptItem(name: text, cost: price))
+                        foundTotal = true
+                    }
+                    continue
+                }
+            }
+            // --- END SUBTOTAL, TAX, TOTAL HANDLING ---
 
             // Detect start of product section
             if !inProductSection {
