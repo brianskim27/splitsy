@@ -63,7 +63,10 @@ struct NewSplitFlowView: View {
         }
         .padding()
         .sheet(isPresented: $showImagePicker, onDismiss: {
-            if receiptImage != nil { step = 1 }
+            if receiptImage != nil {
+                items.removeAll()
+                step = 1
+            }
         }) {
             ImagePicker(image: $receiptImage, sourceType: imagePickerSource)
         }
@@ -272,8 +275,6 @@ struct ReviewSplitStep: View {
                 }
                 .padding(.horizontal)
             }
-            
-            Spacer()
             
             // Confirm Button
             Button(action: onNext) {

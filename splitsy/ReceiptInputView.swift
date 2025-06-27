@@ -209,11 +209,9 @@ struct ReceiptInputView: View {
             }
         }
         .onChange(of: receiptImage) { oldValue, newValue in
-            if newValue != oldValue {
+            if let image = newValue, newValue != oldValue {
                 parsedItems.removeAll()
-                if let image = newValue {
-                    analyzeReceiptImage(image)
-                }
+                analyzeReceiptImage(image)
             }
         }
     }
