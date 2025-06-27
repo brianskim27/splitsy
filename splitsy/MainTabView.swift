@@ -9,155 +9,72 @@ struct PlusButtonPositionKey: PreferenceKey {
 
 struct MainTabView: View {
     @State private var selectedTab = 0
-    @State private var showImagePickerSheet = false
-    @State private var showCamera = false
-    @State private var showGallery = false
-    @State private var receiptImage: UIImage? = nil
-    @State private var showReceiptInput = false
-    @State private var lastTab = 0
-    @State private var plusButtonPosition: CGPoint? = nil
+    @State private var showNewSplit = false
 
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                ZStack {
+        ZStack(alignment: .bottom) {
+            Group {
                     switch selectedTab {
-                    case 0: HomeView()
-                    case 1: ListView()
-                    case 3: HistoryView()
-                    case 4: ProfileView()
-                    default: HomeView()
+                case 0:
+                    HomeView()
+                case 1:
+                    EmptyView() // New Split is a modal
+                case 2:
+                    ProfileView()
+                default:
+                    HomeView()
                     }
                 }
-                MinimalTabBar(selectedTab: $selectedTab, showImagePickerSheet: $showImagePickerSheet)
-            }
-            .zIndex(0)
-
-            ZStack {
-                // Dimmed background
-                if showImagePickerSheet {
-                    Color.black.opacity(0.15)
-                        .ignoresSafeArea()
-                        .onTapGesture { withAnimation(.spring()) { showImagePickerSheet = false } }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            HStack {
+                Spacer()
+                TabBarButton(icon: "house.fill", isSelected: selectedTab == 0) {
+                    selectedTab = 0
                 }
-                // Camera Button
-                Button(action: {
-                    showCamera = true
-                    withAnimation(.spring()) { showImagePickerSheet = false }
-                }) {
-                    Image(systemName: "camera.fill")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 28, height: 28)
+                Spacer()
+                ZStack {
+                    Circle()
                         .foregroundColor(.white)
-                        .padding(4)
-                        .background(Color.blue)
-                        .clipShape(Circle())
-                }
-                .offset(
-                    x: showImagePickerSheet ? -54 * cos(.pi / 3) : 0,
-                    y: showImagePickerSheet ? -54 * sin(.pi / 3) - 20 : 0 // -20 to lift above tab bar
-                )
-                .scaleEffect(showImagePickerSheet ? 1 : 0.1)
-                .opacity(showImagePickerSheet ? 1 : 0)
-                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showImagePickerSheet)
-
-                // Gallery Button
+                        .frame(width: 64, height: 64)
+                        .shadow(radius: 6)
                 Button(action: {
-                    showGallery = true
-                    withAnimation(.spring()) { showImagePickerSheet = false }
+                        showNewSplit = true
                 }) {
-                    Image(systemName: "photo.on.rectangle")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 28, height: 28)
-                        .foregroundColor(.white)
-                        .padding(4)
-                        .background(Color.blue)
-                        .clipShape(Circle())
+                        Image(systemName: "plus")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.blue)
+                            .frame(width: 56, height: 56)
+                            .background(Circle().fill(Color.white))
+                    }
                 }
-                .offset(
-                    x: showImagePickerSheet ? 54 * cos(.pi / 3) : 0,
-                    y: showImagePickerSheet ? -54 * sin(.pi / 3) - 20 : 0
-                )
-                .scaleEffect(showImagePickerSheet ? 1 : 0.1)
-                .opacity(showImagePickerSheet ? 1 : 0)
-                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showImagePickerSheet)
+                .offset(y: -24)
+                Spacer()
+                TabBarButton(icon: "person.fill", isSelected: selectedTab == 2) {
+                    selectedTab = 2
+                }
+                Spacer()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .padding(.bottom, 30) // adjust so it sits just above the tab bar
-            .ignoresSafeArea(.keyboard, edges: .bottom)
-            .zIndex(2)
+            .frame(height: 80)
+            .background(Color(.systemBackground).ignoresSafeArea(edges: .bottom))
         }
-        .sheet(isPresented: $showCamera) {
-            ImagePicker(image: $receiptImage, sourceType: .camera)
-                .onDisappear {
-                    if receiptImage != nil {
-                        showReceiptInput = true
-                    }
-                }
-        }
-        .sheet(isPresented: $showGallery) {
-            ImagePicker(image: $receiptImage, sourceType: .photoLibrary)
-                .onDisappear {
-                    if receiptImage != nil {
-                        showReceiptInput = true
-                    }
-                }
-        }
-        .fullScreenCover(isPresented: $showReceiptInput) {
-            ReceiptInputView(receiptImage: $receiptImage)
+        .sheet(isPresented: $showNewSplit) {
+            NewSplitFlowView()
         }
     }
 }
 
-struct MinimalTabBar: View {
-    @Binding var selectedTab: Int
-    @Binding var showImagePickerSheet: Bool
-    let tabBarIcons = [
-        "house.fill",
-        "list.bullet",
-        "plus",
-        "clock.fill",
-        "person.fill"
-    ]
-
+struct TabBarButton: View {
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(0..<5) { i in
-                if i == 2 {
-                    GeometryReader { geo in
-                        Button(action: {
-                            withAnimation(.spring()) {
-                                showImagePickerSheet.toggle()
-                            }
-                        }) {
-                            Image(systemName: tabBarIcons[i])
-                                .font(.system(size: 24, weight: .regular))
-                                .foregroundColor(selectedTab == i ? Color.blue : Color.gray)
-                                .frame(maxWidth: .infinity, maxHeight: 44)
-                        }
-                        .anchorPreference(key: PlusButtonPositionKey.self, value: .center) { anchor in
-                            geo[anchor]
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: 44)
-                } else {
-                    Button(action: {
-                        withAnimation(.spring()) {
-                            selectedTab = i
-                        }
-                    }) {
-                        Image(systemName: tabBarIcons[i])
-                            .font(.system(size: 24, weight: .regular))
-                            .foregroundColor(selectedTab == i ? Color.blue : Color.gray)
-                            .frame(maxWidth: .infinity, maxHeight: 44)
-                    }
-                }
-            }
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 28, weight: .regular))
+                .foregroundColor(isSelected ? .blue : .gray)
+                .frame(width: 44, height: 44)
         }
-        .frame(height: 60)
-        .background(Color(.systemBackground).ignoresSafeArea(edges: .bottom))
     }
 }
 

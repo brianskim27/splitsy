@@ -1,34 +1,33 @@
 import SwiftUI
 
 struct ItemAssignmentView: View {
-    @State var items: [ReceiptItem] // Items to assign
-    @State private var users: [User] = []
+    @Binding var items: [ReceiptItem] // Items to assign
+    @Binding var users: [User] // Users and their assignments
+    var onComplete: (([String: Double], [String: [(item: String, cost: Double)]]) -> Void)? = nil
     @State private var selectedItems: [ReceiptItem] = []
     @State private var newUserName: String = ""
     @State private var errorMessage: String? = nil
     @State private var userShares: [String: Double] = [:]
-    @State private var isResultViewActive = false
     @State private var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]
-    @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 10) {
+            VStack(spacing: 18) {
                 // Add new user section
-                HStack {
-                    TextField("Enter new user name", text: $newUserName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 10)
+                HStack(spacing: 12) {
+                    TextField("Add person...", text: $newUserName)
+                        .padding(12)
                         .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                    
-                    Button(action: {
-                        addUser()
-                    }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2) // Slightly bigger than default
-                            .foregroundColor(.blue)
+                        .cornerRadius(12)
+                        .font(.body)
+                        .autocapitalization(.words)
+                    Button(action: { addUser() }) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .background(Color.blue)
+                            .clipShape(Circle())
                     }
                 }
                 .padding(.horizontal)
@@ -41,109 +40,156 @@ struct ItemAssignmentView: View {
                         .padding(.bottom, 5)
                 }
 
-                // Items & Users Section
-                ScrollView {
-                    VStack(spacing: 15) {
-                        HStack(alignment: .top, spacing: 20) {
-                            
-                            // 🛍️ Items List
-                            VStack {
-                                Text("Items")
-                                    .font(.headline)
-                                    .bold()
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.bottom, 5)
-
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 15)], spacing: 15) {
-                                    ForEach(items, id: \.id) { item in
-                                        let isSelected = selectedItems.contains(where: { $0.id == item.id })
-                                        ItemRow(
-                                            item: item,
-                                            isSelected: isSelected,
-                                            onTap: { toggleSelection(for: item) }
-                                        )
+                // Items Section
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Items")
+                        .font(.headline)
+                        .bold()
+                        .padding(.leading, 8)
+                        .padding(.top, 8)
+                    ScrollView {
+                        VStack(spacing: 10) {
+                            ForEach(items, id: \.id) { item in
+                                let isSelected = selectedItems.contains(where: { $0.id == item.id })
+                                Button(action: { toggleSelection(for: item) }) {
+                                    HStack {
+                                        Text(item.name)
+                                            .font(.body)
+                                            .bold()
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        Text("$\(item.cost, specifier: "%.2f")")
+                                            .foregroundColor(.green)
+                                            .font(.subheadline)
+                                            .bold()
                                     }
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal)
+                                    .background(isSelected ? Color.blue.opacity(0.15) : Color(.systemGray6))
+                                    .cornerRadius(12)
                                 }
-                                .padding(.horizontal)
                             }
-                            .frame(maxWidth: 400, minHeight: 300)
-
-                            // 👥 Users List
-                            VStack {
-                                Text("Users")
-                                    .font(.headline)
-                                    .bold()
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.bottom, 5)
-
-                                LazyVGrid(columns: [GridItem(.flexible(), spacing: 20)], spacing: 15) {
-                                    ForEach(users.indices, id: \.self) { index in
-                                        UserCard(
-                                            user: users[index],
-                                            items: items,
-                                            onAssign: { assignSelectedItems(to: users[index]) },
-                                            onUnassign: { item in unassignItem(item, from: users[index]) }
-                                        )
-                                    }
-                                }
-                                .padding(.horizontal)
-                            }
-                            .frame(maxWidth: .infinity)
                         }
-                        .padding(.horizontal)
+                        .padding(.vertical, 4)
                     }
-                    .padding(.bottom, 20) // Prevents last item from being cut off
+                    .frame(maxHeight: 320)
                 }
+                .background(Color(.systemBackground))
+                .cornerRadius(18)
+                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                .padding(.horizontal, 4)
+                .frame(maxWidth: .infinity)
+
+                // People Section (vertical, full width)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("People")
+                        .font(.headline)
+                        .bold()
+                        .padding(.leading, 8)
+                        .padding(.top, 8)
+                    if users.isEmpty {
+                        Text("No people added yet")
+                            .foregroundColor(.gray)
+                            .font(.subheadline)
+                            .padding(.vertical, 32)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 10) {
+                                ForEach(users.indices, id: \.self) { index in
+                                    let user = users[index]
+                                    Button(action: { assignSelectedItems(to: user) }) {
+                                        HStack(spacing: 12) {
+                                            Circle()
+                                                .fill(Color.blue.opacity(0.7))
+                                                .frame(width: 36, height: 36)
+                                                .overlay(Text(userInitials(user.name)).foregroundColor(.white).font(.headline))
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(user.name)
+                                                    .font(.body)
+                                                    .bold()
+                                                    .lineLimit(1)
+                                                    .truncationMode(.tail)
+                                                if !user.assignedItemIDs.isEmpty {
+                                                    ScrollView(.horizontal, showsIndicators: false) {
+                                                        HStack(spacing: 6) {
+                                                            ForEach(user.assignedItemIDs, id: \.self) { itemId in
+                                                                if let item = items.first(where: { $0.id == itemId }) {
+                                                                    Text(item.name)
+                                                                        .font(.caption)
+                                                                        .padding(.horizontal, 8)
+                                                                        .padding(.vertical, 4)
+                                                                        .background(Color.blue.opacity(0.15))
+                                                                        .foregroundColor(.blue)
+                                                                        .cornerRadius(8)
+                                                                }
+                                                            }
+                                                        }
+                                                        .frame(height: 28)
+                                                    }
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                }
+                                            }
+                                            Spacer()
+                                        }
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal)
+                                        .background(Color(.systemGray6))
+                                        .cornerRadius(12)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .disabled(selectedItems.isEmpty)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .frame(maxHeight: 320)
+                    }
+                }
+                .background(Color(.systemBackground))
+                .cornerRadius(18)
+                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                .padding(.horizontal, 4)
+                .frame(maxWidth: .infinity, minHeight: 120)
+
+                Spacer()
+
+                // Modern Next Button
+                Button(action: {
+                    let (shares, breakdown) = calculateUserShares()
+                    userShares = shares
+                    detailedBreakdown = breakdown
+                    onComplete?(shares, breakdown)
+                }) {
+                    HStack {
+                        Spacer()
+                        Text("Next")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
+                    .padding()
+                    .background(isNextButtonEnabled ? Color.blue : Color.gray)
+                    .cornerRadius(14)
+                    .shadow(color: isNextButtonEnabled ? Color.blue.opacity(0.18) : .clear, radius: 8, x: 0, y: 2)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                .disabled(!isNextButtonEnabled)
+                .opacity(isNextButtonEnabled ? 1.0 : 0.5)
             }
+            .padding(.top, 12)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss() // Dismiss the current view
-                    }) {
-                        HStack {
-                            Image(systemName: "chevron.left")
-                            Text("Back")
-                        }
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.blue)
-                    }
-                }
-
                 ToolbarItem(placement: .principal) {
                     Text("Assign Items")
                         .font(.headline)
                         .bold()
                 }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        let (shares, breakdown) = calculateUserShares()
-                        userShares = shares
-                        detailedBreakdown = breakdown
-                        isResultViewActive = true
-                    }) {
-                        HStack {
-                            Text("Next")
-                            Image(systemName: "chevron.right")
-                        }
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(isNextButtonEnabled ? .blue : .gray) // Gray when disabled
-                        .opacity(isNextButtonEnabled ? 1.0 : 0.5) // Reduce opacity when disabled
-                    }
-                    .disabled(!isNextButtonEnabled) // Disable button when no assignments
-                }
             }
-
-            // Hidden Navigation to Results View
-            NavigationLink(
-                destination: ResultView(userShares: userShares, detailedBreakdown: detailedBreakdown),
-                isActive: $isResultViewActive
-            ) {
-                EmptyView()
-            }
-            .hidden()
         }
     }
     
@@ -240,5 +286,17 @@ struct ItemAssignmentView: View {
         }
 
         return (userShares, detailedBreakdown)
+    }
+
+    // Helper for initials
+    private func userInitials(_ name: String) -> String {
+        let parts = name.split(separator: " ")
+        if parts.count == 1, let first = parts.first?.first {
+            return String(first).uppercased()
+        } else if let first = parts.first?.first, let last = parts.last?.first {
+            return String(first).uppercased() + String(last).uppercased()
+        } else {
+            return "?"
+        }
     }
 }

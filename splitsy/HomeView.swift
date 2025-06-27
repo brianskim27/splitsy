@@ -3,130 +3,49 @@ import MapKit
 import CoreLocation
 
 struct HomeView: View {
-    @State private var searchText = ""
-    @State private var selectedFilter: String = "All"
-    @State private var selectedDistance: Double = 5.0 // Default: 5 miles
-    @State private var userLocation: CLLocation? = nil
-    @State private var stores: [Store] = []
-    
-    let filters = ["All", "Restaurants", "Cafes", "Grocery Stores"]
-    let distanceOptions: [Double] = [1, 5, 10, 25] // Miles filter
-
-    var filteredStores: [Store] {
-        stores
-            .filter { store in
-                (selectedFilter == "All" || store.type == selectedFilter) &&
-                (searchText.isEmpty || store.name.lowercased().contains(searchText.lowercased())) &&
-                (userLocation != nil ? store.distance(from: userLocation!) <= selectedDistance : true)
-            }
-            .sorted { $0.distance(from: userLocation!) < $1.distance(from: userLocation!) }
-    }
-
     var body: some View {
-        NavigationView {
-            VStack {
-                // 🔍 Search Bar
-                TextField("Search stores...", text: $searchText)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding()
-                
-                // 📍 Distance Filter
-                Picker("Distance", selection: $selectedDistance) {
-                    ForEach(distanceOptions, id: \.self) { distance in
-                        Text("\(Int(distance)) miles").tag(distance)
-                    }
+        VStack(spacing: 32) {
+            HStack {
+                Text("Hi, Brian!")
+                    .font(.largeTitle)
+                    .bold()
+                Spacer()
+            }
+            .padding(.horizontal)
+
+            Button(action: {}) {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 32))
+                    Text("Add Receipt")
+                        .font(.title2)
+                        .bold()
                 }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                
-                // 🏷️ Category Filters
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        ForEach(filters, id: \.self) { filter in
-                            Text(filter)
-                                .padding()
-                                .background(selectedFilter == filter ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
-                                .cornerRadius(8)
-                                .onTapGesture {
-                                    selectedFilter = filter
-                                    fetchNearbyStores()
-                                }
-                        }
-                    }
+                .padding()
+                .foregroundColor(.white)
+                .background(Color.blue)
+                .cornerRadius(16)
+                .shadow(radius: 4)
+            }
+            .padding(.horizontal)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Recent Splits")
+                    .font(.headline)
                     .padding(.horizontal)
-                }
-                
-                // 📍 Store List
-                List(filteredStores) { store in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(store.name)
-                                .font(.headline)
-                            if let location = userLocation {
-                                Text(String(format: "%.1f miles away", store.distance(from: location)))
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        Spacer()
-                        Button(action: { toggleFavorite(for: store) }) {
-                            Image(systemName: store.isFavorited ? "heart.fill" : "heart")
-                                .foregroundColor(store.isFavorited ? .red : .gray)
-                        }
-                    }
-                }
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+                    .frame(height: 80)
+                    .overlay(Text("No recent splits yet.").foregroundColor(.gray))
+                    .padding(.horizontal)
             }
-            .navigationTitle("Nearby Stores")
-            .onAppear {
-                fetchUserLocation()
-            }
+            Spacer()
         }
-    }
-    
-    private func toggleFavorite(for store: Store) {
-        if let index = stores.firstIndex(where: { $0.id == store.id }) {
-            stores[index].isFavorited.toggle()
-        }
-    }
-
-    private func fetchUserLocation() {
-        LocationManager.shared.requestLocation { location in
-            self.userLocation = location
-            fetchNearbyStores()
-        }
-    }
-
-    private func fetchNearbyStores() {
-        guard let location = userLocation else { return }
-
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = selectedFilter == "All" ? "store" : selectedFilter
-        request.region = MKCoordinateRegion(
-            center: location.coordinate,
-            latitudinalMeters: selectedDistance * 1609.34, // Convert miles to meters
-            longitudinalMeters: selectedDistance * 1609.34
-        )
-
-        let search = MKLocalSearch(request: request)
-        search.start { response, error in
-            if let response = response {
-                DispatchQueue.main.async {
-                    self.stores = response.mapItems.map { item in
-                        Store(
-                            name: item.name ?? "Unknown",
-                            type: selectedFilter,
-                            latitude: item.placemark.coordinate.latitude,
-                            longitude: item.placemark.coordinate.longitude,
-                            isFavorited: false
-                        )
-                    }
-                }
-            }
-        }
+        .padding(.top, 40)
     }
 }
 
-// 📍 Store Model with Distance Calculation
+// Store Model with Distance Calculation
 struct Store: Identifiable {
     let id = UUID()
     let name: String

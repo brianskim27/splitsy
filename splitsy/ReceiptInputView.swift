@@ -4,28 +4,55 @@ import PhotosUI
 
 struct ReceiptInputView: View {
     @Binding var receiptImage: UIImage?
-    @State private var parsedItems: [ReceiptItem] = [] // Parsed items
+    @Binding var parsedItems: [ReceiptItem]
+    var onNext: (([ReceiptItem]) -> Void)? = nil
     @State private var detectedTexts: [(id: UUID, text: String, box: CGRect)] = [] // Detected texts with unique IDs
     @State private var isPickerPresented = false // Open picker at start
     @State private var isNavigatingToAssignmentView = false // Tracks navigation
     @State private var isCameraPresented = false // Add state for camera
+    @State private var showFullScreenImage = false
+    @State private var editingItemId: UUID? = nil
+    @State private var editingItemName: String = ""
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            VStack(spacing: 24) {
                 // Receipt Image Display
                 ZStack {
                     if let receiptImage {
                         Image(uiImage: receiptImage)
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 300)
-                            .cornerRadius(12)
-                            .shadow(radius: 8)
+                            .frame(height: 220)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(18)
+                            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                            .onTapGesture { showFullScreenImage = true }
+                            .accessibilityLabel("Tap to enlarge receipt image")
+                            .sheet(isPresented: $showFullScreenImage) {
+                                ZStack {
+                                    Color.black.ignoresSafeArea()
+                                    VStack {
+                                        Spacer()
+                                        Image(uiImage: receiptImage)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .padding()
+                                        Spacer()
+                                        Button("Close") { showFullScreenImage = false }
+                                            .foregroundColor(.white)
+                                            .padding()
+                                    }
+                                }
+                            }
                     } else {
-                        Color.secondary.opacity(0.1)
-                            .frame(height: 300)
-                            .cornerRadius(12)
+                        Color.secondary.opacity(0.08)
+                            .frame(height: 220)
+                            .cornerRadius(18)
                             .overlay(
                                 VStack(spacing: 24) {
                                     Text("Analyze Receipt")
@@ -33,10 +60,7 @@ struct ReceiptInputView: View {
                                         .bold()
                                         .foregroundColor(Color.primary.opacity(0.8))
                                     HStack(spacing: 24) {
-                                        Button(action: {
-                                            // Open camera
-                                            isCameraPresented = true
-                                        }) {
+                                        Button(action: { isCameraPresented = true }) {
                                             VStack {
                                                 Image(systemName: "camera.fill")
                                                     .font(.system(size: 32))
@@ -49,10 +73,7 @@ struct ReceiptInputView: View {
                                                     .foregroundColor(.primary)
                                             }
                                         }
-                                        Button(action: {
-                                            // Open photo picker
-                                            isPickerPresented = true
-                                        }) {
+                                        Button(action: { isPickerPresented = true }) {
                                             VStack {
                                                 Image(systemName: "photo.on.rectangle")
                                                     .font(.system(size: 32))
@@ -70,91 +91,129 @@ struct ReceiptInputView: View {
                             )
                     }
                 }
-                .frame(height: 300)
                 .padding(.horizontal)
 
                 // Parsed Items List
                 if !parsedItems.isEmpty {
-                    List {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Parsed Items")
+                            .font(.headline)
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                        ScrollView {
+                            VStack(spacing: 0) {
                         ForEach(parsedItems, id: \.id) { item in
                             HStack {
+                                        if editingItemId == item.id {
+                                            TextField("Item Name", text: $editingItemName, onCommit: {
+                                                renameItem(id: item.id, newName: editingItemName)
+                                                editingItemId = nil
+                                            })
+                                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                                            .frame(minWidth: 80, maxWidth: 180)
+                                            .font(.body.bold())
+                                        } else {
                                 Text(item.name)
                                     .font(.body)
                                     .bold()
                                     .multilineTextAlignment(.leading)
-                                Spacer()
+                                        }
                                 Text("$\(item.cost, specifier: "%.2f")")
                                     .foregroundColor(.green)
-                                    .font(.body)
+                                            .font(.subheadline)
                                     .bold()
+                                            .padding(.leading, 8)
+                                        Spacer()
+                                        Button(action: {
+                                            editingItemId = item.id
+                                            editingItemName = item.name
+                                        }) {
+                                            Image(systemName: "pencil")
+                                                .foregroundColor(.blue)
+                                        }
+                                        .padding(.trailing, 4)
+                                        Button(action: { removeItemById(item.id) }) {
+                                            Image(systemName: "trash")
+                                                .foregroundColor(.red)
+                                                .padding(8)
+                                        }
+                                        .accessibilityLabel("Delete item")
+                                    }
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                }
                             }
-                            .padding(.vertical, 8)
                         }
-                        .onDelete(perform: removeItem)
+                        .frame(maxHeight: 260)
                     }
-                    .listStyle(PlainListStyle())
-                    .frame(maxHeight: 350)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(18)
+                    .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                    .padding(.horizontal)
                 }
 
                 Spacer()
+
+                // Prominent Next Button
+                Button(action: {
+                    isNavigatingToAssignmentView = true
+                    onNext?(parsedItems)
+                }) {
+                    HStack {
+                        Spacer()
+                        Text("Next")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
+                    .padding()
+                    .background(isNextButtonEnabled ? Color.blue : Color.gray)
+                    .cornerRadius(14)
+                    .shadow(color: isNextButtonEnabled ? Color.blue.opacity(0.18) : .clear, radius: 8, x: 0, y: 2)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                .disabled(!isNextButtonEnabled)
+                .opacity(isNextButtonEnabled ? 1.0 : 0.5)
             }
-            .padding(.bottom, 20)
+            .padding(.top, 12)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                // Back Button (Only Visible After Selection)
-                if receiptImage != nil {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: {
-                            receiptImage = nil // Reset image
-                            parsedItems.removeAll() // Clear parsed items
-                            isPickerPresented = true // Reopen picker
-                        }) {
-                            HStack {
-                                Image(systemName: "chevron.left")
-                                Text("Back")
-                            }
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.blue)
-                        }
-                    }
-                }
-
-                // Title
                 ToolbarItem(placement: .principal) {
                     Text("Analyze Receipt")
                         .font(.headline)
                         .bold()
                 }
-
-                // Next Button
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        isNavigatingToAssignmentView = true
-                    }) {
-                        HStack {
-                            Text("Next")
-                            Image(systemName: "chevron.right")
-                        }
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(isNextButtonEnabled ? .blue : .gray)
-                        .opacity(isNextButtonEnabled ? 1.0 : 0.5)
-                    }
-                    .disabled(!isNextButtonEnabled)
-                }
-            }
-            .navigationDestination(isPresented: $isNavigatingToAssignmentView) {
-                ItemAssignmentView(items: parsedItems)
             }
             .sheet(isPresented: $isCameraPresented) {
                 ImagePicker(image: $receiptImage, sourceType: .camera)
             }
             .sheet(isPresented: $isPickerPresented, onDismiss: {
                 if let image = receiptImage {
-                    analyzeReceiptImage(image) // Auto-analyze after selection
+                    analyzeReceiptImage(image)
                 }
             }) {
                 ImagePicker(image: $receiptImage, sourceType: .photoLibrary)
+            }
+        }
+        .onAppear {
+            if let image = receiptImage, parsedItems.isEmpty {
+                analyzeReceiptImage(image)
+            }
+        }
+        .onChange(of: receiptImage) { oldValue, newValue in
+            if newValue != oldValue {
+                parsedItems.removeAll()
+                if let image = newValue {
+                    analyzeReceiptImage(image)
+                }
             }
         }
     }
@@ -164,9 +223,11 @@ struct ReceiptInputView: View {
         return !parsedItems.isEmpty
     }
 
-    // Remove Item
-    private func removeItem(at offsets: IndexSet) {
-        parsedItems.remove(atOffsets: offsets)
+    // Remove Item by ID (for button delete)
+    private func removeItemById(_ id: UUID) {
+        if let idx = parsedItems.firstIndex(where: { $0.id == id }) {
+            parsedItems.remove(at: idx)
+        }
     }
 
     // Analyze Receipt with OCR (Automatically triggered)
@@ -198,20 +259,15 @@ struct ReceiptInputView: View {
                 self.detectedTexts = detectedTexts
                 self.parsedItems = groupItemsAndPrices(detectedTexts: detectedTexts.map { ($0.text, $0.box) })
                 for (i, t) in detectedTexts.enumerated() {
-                    print("OCR[\(i)]: \(t.text)")
+                    print("\(i): \(t.text)")
                 }
             }
         }
         
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                try requestHandler.perform([request])
-            } catch {
-                print("Failed to perform OCR: \(error.localizedDescription)")
-            }
+        do {
+            try requestHandler.perform([request])
+        } catch {
+            print("Failed to perform OCR: \(error)")
         }
     }
 
@@ -219,18 +275,9 @@ struct ReceiptInputView: View {
     private func groupItemsAndPrices(detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
         let allText = detectedTexts.map { $0.text }.joined(separator: " ").lowercased()
         if allText.contains("walmart") {
-//            print("walmart")
-//            print("=== OCR lines for Walmart ===")
-//            for (i, text) in detectedTexts.map({ $0.text }).enumerated() {
-//                print("\(i): \(text)")
-//            }
+            print("Walmart")
             return parseWalmartReceipt(detectedTexts)
         } else if allText.contains("bj's") || allText.contains("bjs") || allText.contains("bi's") || allText.contains("bis") {
-//            print("bjs")
-//            print("=== OCR lines for BJs ===")
-//            for (i, text) in detectedTexts.map({ $0.text }).enumerated() {
-//                print("\(i): \(text)")
-//            }
             return parseBJsReceipt(detectedTexts)
         } else {
             return parseDefaultReceipt(detectedTexts)
@@ -425,7 +472,6 @@ struct ReceiptInputView: View {
         // Use your original logic here
         var items: [ReceiptItem] = []
         let priceRegex = try! NSRegularExpression(pattern: #"^\$?\s*(\d+[.,]\d{2})$"#)
-        let ignoreKeywords = ["change", "credit", "card"]
         
         var priceCandidates: [(text: String, box: CGRect)] = []
         var textCandidates: [(text: String, box: CGRect)] = []
@@ -493,6 +539,15 @@ struct ReceiptInputView: View {
             }
         }
         return false
+    }
+
+    // Rename item by ID
+    private func renameItem(id: UUID, newName: String) {
+        if let idx = parsedItems.firstIndex(where: { $0.id == id }) {
+            var updatedItem = parsedItems[idx]
+            updatedItem.name = newName
+            parsedItems[idx] = updatedItem
+        }
     }
 }
 
