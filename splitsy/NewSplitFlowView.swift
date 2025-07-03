@@ -90,80 +90,32 @@ struct ChooseSourceStep: View {
     var onCamera: () -> Void
     var onGallery: () -> Void
     var body: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 40) {
+            Spacer()
             Text("Add a Receipt")
-                .font(.title)
+                .font(.largeTitle)
                 .bold()
-            HStack(spacing: 40) {
+            HStack(spacing: 48) {
                 Button(action: onCamera) {
                     VStack {
-                        Image(systemName: "camera.fill").font(.system(size: 40))
+                        Image(systemName: "camera.fill").font(.system(size: 44))
                         Text("Camera")
                     }
                 }
                 Button(action: onGallery) {
                     VStack {
-                        Image(systemName: "photo.on.rectangle").font(.system(size: 40))
+                        Image(systemName: "photo.on.rectangle").font(.system(size: 44))
                         Text("Gallery")
                     }
                 }
             }
+            .foregroundColor(.blue)
             Spacer()
         }
     }
 }
 
-// Step 1: Preview Image
-struct PreviewImageStep: View {
-    @Binding var receiptImage: UIImage?
-    var onBack: () -> Void
-    var onNext: () -> Void
-    @State private var showFullScreen = false
-    var body: some View {
-        VStack(spacing: 24) {
-            Text("Preview Receipt")
-                .font(.title2)
-                .bold()
-            if let image = receiptImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 250)
-                    .cornerRadius(12)
-                    .shadow(radius: 4)
-                    .onTapGesture { showFullScreen = true }
-                    .accessibilityLabel("Tap to enlarge receipt image")
-                    .sheet(isPresented: $showFullScreen) {
-                        ZStack {
-                            Color.black.ignoresSafeArea()
-                            VStack {
-                                Spacer()
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .padding()
-                                Spacer()
-                                Button("Close") { showFullScreen = false }
-                                    .foregroundColor(.white)
-                                    .padding()
-                            }
-                        }
-                    }
-            } else {
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .frame(height: 200)
-                    .overlay(Text("[Receipt Image Preview]").foregroundColor(.gray))
-            }
-            HStack {
-                Button("Back", action: onBack)
-                Spacer()
-                Button("Next", action: onNext)
-            }
-            Spacer()
-        }
-    }
-}
+// Step 1: Preview Image is now in its own file
 
 // Step 2: ReceiptInputView wrapper for flow control
 struct ReceiptInputStep: View {
@@ -225,94 +177,23 @@ struct ReviewSplitStep: View {
     let detailedBreakdown: [String: [(item: String, cost: Double)]]
     var onBack: () -> Void
     var onNext: () -> Void
-    
+
     var body: some View {
-        VStack(spacing: 24) {
-            Text("Review Split")
-                .font(.title2)
-                .bold()
-                .padding(.top, 8)
-            
-            ScrollView {
-                VStack(spacing: 16) {
-                    ForEach(userShares.keys.sorted(), id: \.self) { user in
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Circle()
-                                    .fill(Color.blue.opacity(0.7))
-                                    .frame(width: 32, height: 32)
-                                    .overlay(Text(userInitials(user)).foregroundColor(.white).font(.headline))
-                                Text(user)
-                                    .font(.headline)
-                                    .bold()
-                                Spacer()
-                                Text("$\(userShares[user] ?? 0.0, specifier: "%.2f")")
-                                    .font(.headline)
-                                    .foregroundColor(.blue)
-                            }
-                            
-                            if let items = detailedBreakdown[user] {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    ForEach(items, id: \.item) { itemDetail in
-                                        HStack {
-                                            Text(itemDetail.item)
-                                                .font(.subheadline)
-                                                .foregroundColor(.secondary)
-                                            Spacer()
-                                            Text("$\(itemDetail.cost, specifier: "%.2f")")
-                                                .font(.subheadline)
-                                                .foregroundColor(.green)
-                                        }
-                                    }
-                                }
-                                .padding(.leading, 44)
-                            }
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-                }
-                .padding(.horizontal)
-            }
-            
-            // Confirm Button
-            Button(action: onNext) {
+        ZStack {
+            ReviewSplitView(
+                userShares: userShares,
+                detailedBreakdown: detailedBreakdown,
+                onConfirm: onNext
+            )
+            VStack {
                 HStack {
-                    Spacer()
-                    Text("Confirm Split")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Image(systemName: "checkmark")
-                        .foregroundColor(.white)
+                    Button("Back", action: onBack)
+                        .padding(.top, 8)
+                        .padding(.leading, 8)
                     Spacer()
                 }
-                .padding()
-                .background(Color.blue)
-                .cornerRadius(14)
-                .shadow(color: Color.blue.opacity(0.18), radius: 8, x: 0, y: 2)
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-            
-            HStack {
-                Button("Back", action: onBack)
-                    .padding()
                 Spacer()
             }
-        }
-        .padding(.top, 12)
-    }
-    
-    // Helper for initials
-    private func userInitials(_ name: String) -> String {
-        let parts = name.split(separator: " ")
-        if parts.count == 1, let first = parts.first?.first {
-            return String(first).uppercased()
-        } else if let first = parts.first?.first, let last = parts.last?.first {
-            return String(first).uppercased() + String(last).uppercased()
-        } else {
-            return "?"
         }
     }
 }
@@ -320,18 +201,45 @@ struct ReviewSplitStep: View {
 // Step 5: Completion
 struct CompletionStep: View {
     var onDone: () -> Void
+    @State private var animate = false
     var body: some View {
-        VStack(spacing: 32) {
-            Text("Split Complete!")
-                .font(.title)
-                .bold()
-            Image(systemName: "checkmark.circle.fill")
-                .resizable()
-                .frame(width: 80, height: 80)
-                .foregroundColor(.green)
-            Button("Done", action: onDone)
-                .padding()
-            Spacer()
+        ZStack {
+            LinearGradient(
+                gradient: Gradient(colors: [Color.white, Color.blue.opacity(0.03)]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            VStack(spacing: 36) {
+                Spacer()
+                Image(systemName: "checkmark.circle.fill")
+                    .resizable()
+                    .frame(width: 110, height: 110)
+                    .foregroundColor(.green)
+                    .shadow(color: .green.opacity(0.18), radius: 16, x: 0, y: 4)
+                    .scaleEffect(animate ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.5), value: animate)
+                Text("Split Complete!")
+                    .font(.largeTitle)
+                    .bold()
+                Spacer()
+                Button(action: onDone) {
+                    HStack {
+                        Spacer()
+                        Text("Done")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(14)
+                    .shadow(color: Color.blue.opacity(0.18), radius: 8, x: 0, y: 2)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 24)
+            }
         }
+        .ignoresSafeArea()
+        .onAppear { animate = true }
     }
 }

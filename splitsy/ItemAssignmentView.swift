@@ -98,47 +98,52 @@ struct ItemAssignmentView: View {
                             VStack(spacing: 10) {
                                 ForEach(users.indices, id: \.self) { index in
                                     let user = users[index]
-                                    Button(action: { assignSelectedItems(to: user) }) {
+                                    VStack(alignment: .leading, spacing: 2) {
                                         HStack(spacing: 12) {
                                             Circle()
                                                 .fill(Color.blue.opacity(0.7))
                                                 .frame(width: 36, height: 36)
                                                 .overlay(Text(userInitials(user.name)).foregroundColor(.white).font(.headline))
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(user.name)
-                                                    .font(.body)
-                                                    .bold()
-                                                    .lineLimit(1)
-                                                    .truncationMode(.tail)
-                                                if !user.assignedItemIDs.isEmpty {
-                                                    ScrollView(.horizontal, showsIndicators: false) {
-                                                        HStack(spacing: 6) {
-                                                            ForEach(user.assignedItemIDs, id: \.self) { itemId in
-                                                                if let item = items.first(where: { $0.id == itemId }) {
-                                                                    Text(item.name)
-                                                                        .font(.caption)
-                                                                        .padding(.horizontal, 8)
-                                                                        .padding(.vertical, 4)
-                                                                        .background(Color.blue.opacity(0.15))
-                                                                        .foregroundColor(.blue)
-                                                                        .cornerRadius(8)
-                                                                }
-                                                            }
-                                                        }
-                                                        .frame(height: 28)
-                                                    }
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                                }
-                                            }
+                                            Text(user.name)
+                                                .font(.body)
+                                                .bold()
+                                                .lineLimit(1)
+                                                .truncationMode(.tail)
                                             Spacer()
                                         }
-                                        .padding(.vertical, 8)
-                                        .padding(.horizontal)
-                                        .background(Color(.systemGray6))
-                                        .cornerRadius(12)
+                                        if !user.assignedItemIDs.isEmpty {
+                                            ScrollView(.horizontal, showsIndicators: false) {
+                                                HStack(spacing: 6) {
+                                                    ForEach(user.assignedItemIDs, id: \.self) { itemId in
+                                                        if let item = items.first(where: { $0.id == itemId }) {
+                                                            Text(item.name)
+                                                                .font(.caption)
+                                                                .padding(.horizontal, 8)
+                                                                .padding(.vertical, 4)
+                                                                .background(Color.blue.opacity(0.15))
+                                                                .foregroundColor(.blue)
+                                                                .cornerRadius(8)
+                                                                .onTapGesture {
+                                                                    unassignItem(item, from: user)
+                                                                }
+                                                        }
+                                                    }
+                                                }
+                                                .frame(height: 28)
+                                            }
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
                                     }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .disabled(selectedItems.isEmpty)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        if !selectedItems.isEmpty {
+                                            assignSelectedItems(to: user)
+                                        }
+                                    }
                                 }
                             }
                             .padding(.vertical, 4)
@@ -185,8 +190,8 @@ struct ItemAssignmentView: View {
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Assign Items")
-                        .font(.headline)
+                    Text("Assign")
+                        .font(.title2)
                         .bold()
                 }
             }

@@ -23,7 +23,7 @@ struct ReceiptInputView: View {
                         Image(uiImage: receiptImage)
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 220)
+                            .frame(height: 280)
                             .background(Color(.systemBackground))
                             .cornerRadius(18)
                             .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
@@ -55,7 +55,7 @@ struct ReceiptInputView: View {
                             .cornerRadius(18)
                             .overlay(
                                 VStack(spacing: 24) {
-                                    Text("Analyze Receipt")
+                                    Text("Analyze")
                                         .font(.title2)
                                         .bold()
                                         .foregroundColor(Color.primary.opacity(0.8))
@@ -91,12 +91,12 @@ struct ReceiptInputView: View {
                             )
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 32)
 
                 // Parsed Items List
                 if !parsedItems.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Parsed Items")
+                        Text("Items")
                             .font(.headline)
                             .padding(.horizontal)
                             .padding(.top, 8)
@@ -143,17 +143,17 @@ struct ReceiptInputView: View {
                                     .padding(.horizontal)
                                     .background(Color(.systemGray6))
                                     .cornerRadius(12)
-                                    .padding(.horizontal, 8)
+                                    .padding(.horizontal, 16)
                                     .padding(.vertical, 4)
                                 }
                             }
                         }
-                        .frame(maxHeight: 260)
+                        .frame(maxHeight: 360)
                     }
                     .background(Color(.systemBackground))
                     .cornerRadius(18)
                     .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16)
                 }
 
                 Spacer()
@@ -187,8 +187,8 @@ struct ReceiptInputView: View {
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Analyze Receipt")
-                        .font(.headline)
+                    Text("Analyze")
+                        .font(.title2)
                         .bold()
                 }
             }
@@ -261,11 +261,15 @@ struct ReceiptInputView: View {
                 }
             }
         }
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
         
-        do {
-            try requestHandler.perform([request])
-        } catch {
-            print("Failed to perform OCR: \(error)")
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try requestHandler.perform([request])
+            } catch {
+                print("Failed to perform OCR: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -275,7 +279,7 @@ struct ReceiptInputView: View {
         if allText.contains("walmart") {
             print("Walmart")
             return parseWalmartReceipt(detectedTexts)
-        } else if allText.contains("bj's") || allText.contains("bjs") || allText.contains("bi's") || allText.contains("bis") {
+        } else if allText.contains("bj's") || allText.contains("bjs") {
             return parseBJsReceipt(detectedTexts)
         } else {
             return parseDefaultReceipt(detectedTexts)
