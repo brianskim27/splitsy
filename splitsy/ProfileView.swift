@@ -1,32 +1,76 @@
 import SwiftUI
 
-struct ProfileView: View {
+struct HistoryView: View {
+    @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer().frame(height: 32)
-            Image(systemName: "person.crop.circle.fill")
-                    .resizable()
-                    .frame(width: 100, height: 100)
-                .foregroundColor(.blue)
-            Text("Brian")
-                .font(.title)
-                    .bold()
-            VStack(alignment: .leading, spacing: 16) {
-                Text("History")
-                    .font(.headline)
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(height: 60)
-                    .overlay(Text("No history yet.").foregroundColor(.gray))
-                Text("Favorites")
-                    .font(.headline)
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(height: 60)
-                    .overlay(Text("No favorites yet.").foregroundColor(.gray))
+        VStack {
+            if splitHistoryManager.pastSplits.isEmpty {
+                VStack {
+                    Spacer()
+                    Text("No splits recorded yet.")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            } else {
+                List(splitHistoryManager.pastSplits) { split in
+                    RecentSplitRow(split: split)
+                        .listRowInsets(EdgeInsets())
+                        .padding(.vertical, 8)
+                }
+                .listStyle(PlainListStyle())
             }
-            .padding(.horizontal)
+        }
+        .navigationTitle("History")
+    }
+}
+
+
+struct ProfileView: View {
+    @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @State private var showNewSplit = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            HStack(spacing: 16) {
+                Image(systemName: "person.crop.circle.fill")
+                    .resizable()
+                    .frame(width: 60, height: 60)
+                    .foregroundColor(.blue)
+
+                VStack(alignment: .leading) {
+                    Text("Brian")
+                        .font(.title)
+                        .bold()
+                    Text("View Account & Settings")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.top)
+
+            // Link to full history
+            NavigationLink {
+                HistoryView()
+            } label: {
+                HStack {
+                    Image(systemName: "clock.fill")
+                    Text("Split History")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                }
+                .font(.headline)
+                .foregroundColor(.primary)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+            }
+
             Spacer()
+        }
+        .padding(.horizontal)
+        .fullScreenCover(isPresented: $showNewSplit) {
+            NewSplitFlowView()
         }
     }
 }

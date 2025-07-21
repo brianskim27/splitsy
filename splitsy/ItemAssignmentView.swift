@@ -3,12 +3,12 @@ import SwiftUI
 struct ItemAssignmentView: View {
     @Binding var items: [ReceiptItem] // Items to assign
     @Binding var users: [User] // Users and their assignments
-    var onComplete: (([String: Double], [String: [(item: String, cost: Double)]]) -> Void)? = nil
+    var onComplete: (([String: Double], [String: [ItemDetail]]) -> Void)? = nil
     @State private var selectedItems: [ReceiptItem] = []
     @State private var newUserName: String = ""
     @State private var errorMessage: String? = nil
     @State private var userShares: [String: Double] = [:]
-    @State private var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]
+    @State private var detailedBreakdown: [String: [ItemDetail]] = [:]
 
     var body: some View {
         NavigationStack {
@@ -42,15 +42,15 @@ struct ItemAssignmentView: View {
 
                 // Items Section
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Items")
-                        .font(.headline)
-                        .bold()
+                                Text("Items")
+                                    .font(.headline)
+                                    .bold()
                         .padding(.leading, 8)
                         .padding(.top, 8)
                     ScrollView {
                         VStack(spacing: 10) {
-                            ForEach(items, id: \.id) { item in
-                                let isSelected = selectedItems.contains(where: { $0.id == item.id })
+                                    ForEach(items, id: \.id) { item in
+                                        let isSelected = selectedItems.contains(where: { $0.id == item.id })
                                 Button(action: { toggleSelection(for: item) }) {
                                     HStack {
                                         Text(item.name)
@@ -68,10 +68,10 @@ struct ItemAssignmentView: View {
                                     .background(isSelected ? Color.blue.opacity(0.15) : Color(.systemGray6))
                                     .cornerRadius(12)
                                 }
-                            }
-                        }
+                                    }
+                                }
                         .padding(.vertical, 4)
-                    }
+                            }
                     .frame(maxHeight: 320)
                 }
                 .background(Color(.systemBackground))
@@ -83,8 +83,8 @@ struct ItemAssignmentView: View {
                 // People Section (vertical, full width)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("People")
-                        .font(.headline)
-                        .bold()
+                                    .font(.headline)
+                                    .bold()
                         .padding(.leading, 8)
                         .padding(.top, 8)
                     if users.isEmpty {
@@ -92,11 +92,11 @@ struct ItemAssignmentView: View {
                             .foregroundColor(.gray)
                             .font(.subheadline)
                             .padding(.vertical, 32)
-                            .frame(maxWidth: .infinity, alignment: .center)
+                                    .frame(maxWidth: .infinity, alignment: .center)
                     } else {
                         ScrollView {
                             VStack(spacing: 10) {
-                                ForEach(users.indices, id: \.self) { index in
+                                    ForEach(users.indices, id: \.self) { index in
                                     let user = users[index]
                                     VStack(alignment: .leading, spacing: 2) {
                                         HStack(spacing: 12) {
@@ -130,12 +130,12 @@ struct ItemAssignmentView: View {
                                                     }
                                                 }
                                                 .frame(height: 28)
-                                            }
+                            }
                                             .frame(maxWidth: .infinity, alignment: .leading)
-                                        }
+                        }
                                     }
                                     .padding(.vertical, 8)
-                                    .padding(.horizontal)
+                        .padding(.horizontal)
                                     .background(Color(.systemGray6))
                                     .cornerRadius(12)
                                     .contentShape(Rectangle())
@@ -145,7 +145,7 @@ struct ItemAssignmentView: View {
                                         }
                                     }
                                 }
-                            }
+                    }
                             .padding(.vertical, 4)
                         }
                         .frame(maxHeight: 320)
@@ -268,29 +268,29 @@ struct ItemAssignmentView: View {
     }
 
     // Calculate User Shares
-    private func calculateUserShares() -> (shares: [String: Double], breakdown: [String: [(item: String, cost: Double)]]) {
-        var userShares: [String: Double] = [:]
-        var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]
+    private func calculateUserShares() -> ([String: Double], [String: [ItemDetail]]) {
+        var shares: [String: Double] = [:]
+        var breakdown: [String: [ItemDetail]] = [:]
 
         for user in users {
-            var totalCost = 0.0
-            var userBreakdown: [(item: String, cost: Double)] = []
+            var userTotal: Double = 0
+            var userItems: [ItemDetail] = []
 
             for itemID in user.assignedItemIDs {
                 if let item = items.first(where: { $0.id == itemID }) {
-                    if item.assignedUsers.count > 0 {
-                        let splitCost = round((item.cost / Double(item.assignedUsers.count)) * 100) / 100
-                        totalCost += splitCost
-                        userBreakdown.append((item: item.name, cost: splitCost))
+                    let costPerUser = item.cost / Double(item.assignedUsers.count)
+                    userTotal += costPerUser
+                    userItems.append(ItemDetail(item: item.name, cost: costPerUser))
                     }
                 }
+            
+            if userTotal > 0 {
+                shares[user.name] = userTotal
+                breakdown[user.name] = userItems
             }
-
-            userShares[user.name] = round(totalCost * 100) / 100
-            detailedBreakdown[user.name] = userBreakdown
         }
-
-        return (userShares, detailedBreakdown)
+        
+        return (shares, breakdown)
     }
 
     // Helper for initials

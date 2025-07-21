@@ -3,45 +3,54 @@ import MapKit
 import CoreLocation
 
 struct HomeView: View {
+    @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @State private var showNewSplit = false
+
     var body: some View {
-        VStack(spacing: 32) {
-            HStack {
-                Text("Hi, Brian!")
-                    .font(.largeTitle)
-                    .bold()
-                Spacer()
-            }
-            .padding(.horizontal)
+        VStack(alignment: .leading, spacing: 24) {
+            Text("Hi, Brian!")
+                .font(.largeTitle)
+                .bold()
+                .padding(.top)
 
-            Button(action: {}) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 32))
-                    Text("Add Receipt")
-                        .font(.title2)
-                        .bold()
-                }
-                .padding()
-                .foregroundColor(.white)
-                .background(Color.blue)
-                .cornerRadius(16)
-                .shadow(radius: 4)
+            HStack(spacing: 6) {
+                Image(systemName: "chart.pie.fill")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                Text("You've split with 4 people so far this month.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
             }
-            .padding(.horizontal)
+            .padding(.bottom, 4)
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text("Recent Splits")
-                    .font(.headline)
-                    .padding(.horizontal)
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(height: 80)
-                    .overlay(Text("No recent splits yet.").foregroundColor(.gray))
-                    .padding(.horizontal)
+                    .font(.title2)
+                    .bold()
+                    .padding(.bottom, 8)
+
+                if splitHistoryManager.pastSplits.isEmpty {
+                    Text("No recent splits yet.")
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 16)
+                } else {
+                    let splits = Array(splitHistoryManager.pastSplits.prefix(3))
+                    ForEach(Array(splits.enumerated()), id: \ .element.id) { (index, split) in
+                        RecentSplitRow(split: split)
+                        if index < splits.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
             }
+            .padding(.top, 8)
+
             Spacer()
         }
-        .padding(.top, 40)
+        .padding(.horizontal)
+        .fullScreenCover(isPresented: $showNewSplit) {
+            NewSplitFlowView()
+        }
     }
 }
 
@@ -53,9 +62,4 @@ struct Store: Identifiable {
     let latitude: Double
     let longitude: Double
     var isFavorited: Bool
-
-    func distance(from location: CLLocation) -> Double {
-        let storeLocation = CLLocation(latitude: latitude, longitude: longitude)
-        return location.distance(from: storeLocation) / 1609.34 // Convert to miles
-    }
 }

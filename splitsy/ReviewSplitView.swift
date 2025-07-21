@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ReviewSplitView: View {
     let userShares: [String: Double]
-    let detailedBreakdown: [String: [(item: String, cost: Double)]]
+    let detailedBreakdown: [String: [ItemDetail]]
     let onConfirm: () -> Void
 
     var body: some View {
@@ -32,7 +32,7 @@ struct ReviewSplitView: View {
                             
                             if let items = detailedBreakdown[user] {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    ForEach(items, id: \.item) { itemDetail in
+                                    ForEach(items, id: \.self) { itemDetail in
                                         HStack {
                                             Text(itemDetail.item)
                                                 .font(.subheadline)
@@ -87,4 +87,4 @@ struct ReviewSplitView: View {
             return "?"
         }
     }
-} 
+}

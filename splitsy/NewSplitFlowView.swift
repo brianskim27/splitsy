@@ -2,6 +2,8 @@ import SwiftUI
 
 struct NewSplitFlowView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    
     @State private var step: Int = 0
     @State private var receiptImage: UIImage? = nil
     @State private var showImagePicker = false
@@ -10,76 +12,94 @@ struct NewSplitFlowView: View {
     @State private var proceedFromAssignment = false
     @State private var items: [ReceiptItem] = []
     @State private var userShares: [String: Double] = [:]
-    @State private var detailedBreakdown: [String: [(item: String, cost: Double)]] = [:]
+    @State private var detailedBreakdown: [String: [ItemDetail]] = [:]
     @State private var users: [User] = []
 
     var body: some View {
-        VStack(spacing: 0) {
-            Group {
-                switch step {
-                case 0:
-                    ChooseSourceStep(
-                        onCamera: {
-                            imagePickerSource = .camera
-                            showImagePicker = true
-                        },
-                        onGallery: {
-                            imagePickerSource = .photoLibrary
-                            showImagePicker = true
-                        }
-                    )
-                case 1:
-                    PreviewImageStep(receiptImage: $receiptImage, onBack: { step = 0 }, onNext: { step += 1 })
-                case 2:
-                    ReceiptInputStep(
-                        receiptImage: $receiptImage,
-                        proceed: $proceedFromReceiptInput,
-                        parsedItems: $items,
-                        onBack: { step -= 1 }
-                    )
-                case 3:
-                    ItemAssignmentStep(
-                        items: $items,
-                        users: $users,
-                        proceed: $proceedFromAssignment,
-                        userShares: $userShares,
-                        detailedBreakdown: $detailedBreakdown,
-                        onBack: { step -= 1 }
-                    )
-                case 4:
-                    ReviewSplitStep(
-                        userShares: userShares,
-                        detailedBreakdown: detailedBreakdown,
-                        onBack: { step -= 1 },
-                        onNext: { step += 1 }
-                    )
-                case 5:
-                    CompletionStep(onDone: { dismiss() })
-                default:
-                    EmptyView()
+        NavigationStack {
+            VStack(spacing: 0) {
+                Group {
+                    switch step {
+                    case 0:
+                        ChooseSourceStep(
+                            onCamera: {
+                                imagePickerSource = .camera
+                                showImagePicker = true
+                            },
+                            onGallery: {
+                                imagePickerSource = .photoLibrary
+                                showImagePicker = true
+                            }
+                        )
+                    case 1:
+                        PreviewImageStep(receiptImage: $receiptImage, onBack: { step = 0 }, onNext: { step += 1 })
+                    case 2:
+                        ReceiptInputStep(
+                            receiptImage: $receiptImage,
+                            proceed: $proceedFromReceiptInput,
+                            parsedItems: $items,
+                            onBack: { step -= 1 }
+                        )
+                    case 3:
+                        ItemAssignmentStep(
+                            items: $items,
+                            users: $users,
+                            proceed: $proceedFromAssignment,
+                            userShares: $userShares,
+                            detailedBreakdown: $detailedBreakdown,
+                            onBack: { step -= 1 }
+                        )
+                    case 4:
+                        ReviewSplitStep(
+                            userShares: userShares,
+                            detailedBreakdown: detailedBreakdown,
+                            onBack: { step -= 1 },
+                            onNext: {
+                                let newSplit = Split(
+                                    totalAmount: userShares.values.reduce(0, +),
+                                    userShares: userShares,
+                                    detailedBreakdown: detailedBreakdown,
+                                    receiptImage: receiptImage
+                                )
+                                splitHistoryManager.addSplit(newSplit)
+                                step += 1
+                            }
+                        )
+                    case 5:
+                        CompletionStep(onDone: { dismiss() })
+                    default:
+                        EmptyView()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .padding()
+            .sheet(isPresented: $showImagePicker, onDismiss: {
+                if receiptImage != nil {
+                    items.removeAll()
+                    step = 1
+                }
+            }) {
+                ImagePicker(image: $receiptImage, sourceType: imagePickerSource)
+            }
+            .onChange(of: proceedFromReceiptInput) { oldValue, newValue in
+                if newValue {
+                    step = 3
+                    proceedFromReceiptInput = false
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .padding()
-        .sheet(isPresented: $showImagePicker, onDismiss: {
-            if receiptImage != nil {
-                items.removeAll()
-                step = 1
+            .onChange(of: proceedFromAssignment) { oldValue, newValue in
+                if newValue {
+                    step = 4
+                    proceedFromAssignment = false
+                }
             }
-        }) {
-            ImagePicker(image: $receiptImage, sourceType: imagePickerSource)
-        }
-        .onChange(of: proceedFromReceiptInput) { oldValue, newValue in
-            if newValue {
-                step = 3
-                proceedFromReceiptInput = false
-            }
-        }
-        .onChange(of: proceedFromAssignment) { oldValue, newValue in
-            if newValue {
-                step = 4
-                proceedFromAssignment = false
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
             }
         }
     }
@@ -145,7 +165,7 @@ struct ItemAssignmentStep: View {
     @Binding var users: [User]
     @Binding var proceed: Bool
     @Binding var userShares: [String: Double]
-    @Binding var detailedBreakdown: [String: [(item: String, cost: Double)]]
+    @Binding var detailedBreakdown: [String: [ItemDetail]]
     var onBack: () -> Void
     var body: some View {
         ZStack {
@@ -174,7 +194,7 @@ struct ItemAssignmentStep: View {
 // Step 4: Review Split
 struct ReviewSplitStep: View {
     let userShares: [String: Double]
-    let detailedBreakdown: [String: [(item: String, cost: Double)]]
+    let detailedBreakdown: [String: [ItemDetail]]
     var onBack: () -> Void
     var onNext: () -> Void
 
