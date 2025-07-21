@@ -54,8 +54,9 @@ struct NewSplitFlowView: View {
                             userShares: userShares,
                             detailedBreakdown: detailedBreakdown,
                             onBack: { step -= 1 },
-                            onNext: {
+                            onNext: { splitName in
                                 let newSplit = Split(
+                                    description: splitName.isEmpty ? nil : splitName,
                                     totalAmount: userShares.values.reduce(0, +),
                                     userShares: userShares,
                                     detailedBreakdown: detailedBreakdown,
@@ -185,7 +186,7 @@ struct ReviewSplitStep: View {
     let userShares: [String: Double]
     let detailedBreakdown: [String: [ItemDetail]]
     var onBack: () -> Void
-    var onNext: () -> Void
+    var onNext: (String) -> Void
 
     var body: some View {
         ZStack {

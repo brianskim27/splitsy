@@ -3,8 +3,20 @@ import SwiftUI
 struct ReviewSplitView: View {
     let userShares: [String: Double]
     let detailedBreakdown: [String: [ItemDetail]]
-    let onConfirm: () -> Void
-
+    @State private var splitName: String = ""
+    let onConfirm: (String) -> Void
+    
+    private func userInitials(_ name: String) -> String {
+        let parts = name.split(separator: " ")
+        if parts.count == 1, let first = parts.first?.first {
+            return String(first).uppercased()
+        } else if let first = parts.first?.first, let last = parts.last?.first {
+            return String(first).uppercased() + String(last).uppercased()
+        } else {
+            return "?"
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 24) {
             Text("Review")
@@ -55,7 +67,10 @@ struct ReviewSplitView: View {
                 .padding(.horizontal)
             }
             Spacer()
-            Button(action: onConfirm) {
+            TextField("Split name", text: $splitName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(.horizontal)
+            Button(action: { onConfirm(splitName) }) {
                 HStack {
                     Spacer()
                     Text("Confirm")
@@ -66,25 +81,14 @@ struct ReviewSplitView: View {
                     Spacer()
                 }
                 .padding()
-                .background(Color.blue)
+                .background(splitName.isEmpty ? Color.gray : Color.blue)
                 .cornerRadius(14)
-                .shadow(color: Color.blue.opacity(0.18), radius: 8, x: 0, y: 2)
+                .shadow(color: (splitName.isEmpty ? Color.gray : Color.blue).opacity(0.18), radius: 8, x: 0, y: 2)
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
+            .disabled(splitName.isEmpty)
         }
         .padding(.top, 12)
-    }
-
-    // Helper for initials
-    private func userInitials(_ name: String) -> String {
-        let parts = name.split(separator: " ")
-        if parts.count == 1, let first = parts.first?.first {
-            return String(first).uppercased()
-        } else if let first = parts.first?.first, let last = parts.last?.first {
-            return String(first).uppercased() + String(last).uppercased()
-        } else {
-            return "?"
-        }
     }
 }
