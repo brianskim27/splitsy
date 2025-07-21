@@ -79,7 +79,7 @@ struct SplitDetailView: View {
                             }
                         }
                         .padding()
-                        .background(Color(.systemGray6))
+                        .background(Color(.secondarySystemBackground))
                         .cornerRadius(12)
                     }
                 }
