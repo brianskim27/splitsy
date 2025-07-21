@@ -2,9 +2,22 @@ import SwiftUI
 
 struct HistoryView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @State private var searchText = ""
+
+    var filteredSplits: [Split] {
+        if searchText.isEmpty {
+            return splitHistoryManager.pastSplits
+        } else {
+            return splitHistoryManager.pastSplits.filter { split in
+                (split.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+                split.userShares.keys.contains(where: { $0.localizedCaseInsensitiveContains(searchText) })
+            }
+        }
+    }
+
     var body: some View {
         VStack {
-            if splitHistoryManager.pastSplits.isEmpty {
+            if filteredSplits.isEmpty {
                 VStack {
                     Spacer()
                     Text("No splits recorded yet.")
@@ -13,7 +26,7 @@ struct HistoryView: View {
                     Spacer()
                 }
             } else {
-                List(splitHistoryManager.pastSplits) { split in
+                List(filteredSplits) { split in
                     RecentSplitRow(split: split)
                         .listRowInsets(EdgeInsets())
                         .padding(.vertical, 8)
@@ -22,6 +35,7 @@ struct HistoryView: View {
             }
         }
         .navigationTitle("History")
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search by person or name")
     }
 }
 
