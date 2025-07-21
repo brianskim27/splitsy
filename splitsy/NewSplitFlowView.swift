@@ -96,8 +96,17 @@ struct NewSplitFlowView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
+                    if step == 0 {
+                        Button("Cancel") {
+                            dismiss()
+                        }
+                    } else if step > 0 && step < 5 {
+                        Button(action: { step -= 1 }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                Text("Back")
+                            }
+                        }
                     }
                 }
             }
@@ -146,15 +155,6 @@ struct ReceiptInputStep: View {
     var body: some View {
         ZStack {
             ReceiptInputView(receiptImage: $receiptImage, parsedItems: $parsedItems, onNext: { _ in proceed = true })
-            VStack {
-                HStack {
-                    Button("Back", action: onBack)
-                        .padding(.top, 8)
-                        .padding(.leading, 8)
-                    Spacer()
-                }
-                Spacer()
-            }
         }
     }
 }
@@ -178,15 +178,6 @@ struct ItemAssignmentStep: View {
                     proceed = true
                 }
             )
-            VStack {
-                HStack {
-                    Button("Back", action: onBack)
-                        .padding(.top, 8)
-                        .padding(.leading, 8)
-                    Spacer()
-                }
-                Spacer()
-            }
         }
     }
 }
@@ -205,15 +196,6 @@ struct ReviewSplitStep: View {
                 detailedBreakdown: detailedBreakdown,
                 onConfirm: onNext
             )
-            VStack {
-                HStack {
-                    Button("Back", action: onBack)
-                        .padding(.top, 8)
-                        .padding(.leading, 8)
-                    Spacer()
-                }
-                Spacer()
-            }
         }
     }
 }

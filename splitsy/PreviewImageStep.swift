@@ -71,15 +71,6 @@ struct PreviewImageStep: View {
                 .padding(.bottom, 8)
             }
             .padding(.top, 12)
-            VStack {
-                HStack {
-                    Button("Back", action: onBack)
-                        .padding(.top, 8)
-                        .padding(.leading, 8)
-                    Spacer()
-                }
-                Spacer()
-            }
         }
     }
 } 

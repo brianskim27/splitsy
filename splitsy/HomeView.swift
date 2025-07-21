@@ -17,7 +17,7 @@ struct HomeView: View {
                 Image(systemName: "chart.pie.fill")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                Text("You've split with 4 people so far this month.")
+                Text("You've split with 4 people so far this month.")   // Placeholder fun fact
                     .font(.body)
                     .foregroundColor(.secondary)
             }
