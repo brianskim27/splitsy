@@ -14,7 +14,6 @@ class SplitHistoryManager: ObservableObject {
     init() {
         loadSplits()
         
-        // Add mock data if no splits are loaded
         if pastSplits.isEmpty {
             print("No splits found.")
         }

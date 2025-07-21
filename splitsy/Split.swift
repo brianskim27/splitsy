@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 
-// A Codable struct to replace the non-Codable tuple
 struct ItemDetail: Codable, Hashable {
     let item: String
     let cost: Double
@@ -13,9 +12,8 @@ struct Split: Identifiable, Codable {
     let date: Date
     let totalAmount: Double
     let userShares: [String: Double]
-    // Use the new Codable struct here
     let detailedBreakdown: [String: [ItemDetail]]
-    var receiptImageData: Data? // Store image data directly
+    var receiptImageData: Data?
     
     enum CodingKeys: String, CodingKey {
         case id, description, date, totalAmount, userShares, detailedBreakdown, receiptImageData

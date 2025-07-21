@@ -30,10 +30,8 @@ struct PreviewImageStep: View {
                                     Color.black.ignoresSafeArea()
                                     VStack {
                                         Spacer()
-                                        Image(uiImage: image)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .padding()
+                                        ZoomableImageView(image: image)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                                         Spacer()
                                         Button("Close") { showFullScreen = false }
                                             .foregroundColor(.white)

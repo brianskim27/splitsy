@@ -38,10 +38,8 @@ struct ReceiptInputView: View {
                                     Color.black.ignoresSafeArea()
                                     VStack {
                                         Spacer()
-                                        Image(uiImage: receiptImage)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .padding()
+                                        ZoomableImageView(image: receiptImage)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                                         Spacer()
                                         Button("Close") { showFullScreenImage = false }
                                             .foregroundColor(.white)
@@ -158,7 +156,7 @@ struct ReceiptInputView: View {
 
                 Spacer()
 
-                // Prominent Next Button
+                // Next Button
                 Button(action: {
                     isNavigatingToAssignmentView = true
                     onNext?(parsedItems)
@@ -337,8 +335,7 @@ struct ReceiptInputView: View {
                     continue
                 }
             }
-            // --- END SUBTOTAL, TAX, TOTAL HANDLING ---
-
+            
             // Detect start of product section
             if !inProductSection {
                 if let _ = codeWithNameRegex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) {
@@ -549,38 +546,6 @@ struct ReceiptInputView: View {
             var updatedItem = parsedItems[idx]
             updatedItem.name = newName
             parsedItems[idx] = updatedItem
-        }
-    }
-}
-
-// 🗑 Swipe-to-Delete Row
-struct SwipeToDeleteRow: View {
-    let item: ReceiptItem
-    let onDelete: (UUID) -> Void
-
-    var body: some View {
-        HStack {
-            Text(item.name)
-                .font(.body)
-                .bold()
-                .multilineTextAlignment(.leading)
-            Spacer()
-            Text("$\(item.cost, specifier: "%.2f")")
-                .foregroundColor(.green)
-                .font(.body)
-                .bold()
-        }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: Color.gray.opacity(0.2), radius: 4, x: 0, y: 2)
-        .swipeActions {
-            Button(role: .destructive) {
-                onDelete(item.id)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
         }
     }
 }

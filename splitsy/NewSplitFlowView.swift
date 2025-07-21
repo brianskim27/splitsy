@@ -114,7 +114,7 @@ struct NewSplitFlowView: View {
     }
 }
 
-// Step 0: Choose Source
+// Choose Source
 struct ChooseSourceStep: View {
     var onCamera: () -> Void
     var onGallery: () -> Void
@@ -144,9 +144,7 @@ struct ChooseSourceStep: View {
     }
 }
 
-// Step 1: Preview Image is now in its own file
-
-// Step 2: ReceiptInputView wrapper for flow control
+// ReceiptInputView wrapper for flow control
 struct ReceiptInputStep: View {
     @Binding var receiptImage: UIImage?
     @Binding var proceed: Bool
@@ -159,7 +157,7 @@ struct ReceiptInputStep: View {
     }
 }
 
-// Step 3: ItemAssignmentView wrapper for flow control
+// ItemAssignmentView wrapper for flow control
 struct ItemAssignmentStep: View {
     @Binding var items: [ReceiptItem]
     @Binding var users: [User]
@@ -182,7 +180,7 @@ struct ItemAssignmentStep: View {
     }
 }
 
-// Step 4: Review Split
+// Review Split
 struct ReviewSplitStep: View {
     let userShares: [String: Double]
     let detailedBreakdown: [String: [ItemDetail]]
@@ -200,7 +198,7 @@ struct ReviewSplitStep: View {
     }
 }
 
-// Step 5: Completion
+// Completion
 struct CompletionStep: View {
     var onDone: () -> Void
     @State private var animate = false

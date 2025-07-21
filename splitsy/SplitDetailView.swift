@@ -3,6 +3,7 @@ import SwiftUI
 struct SplitDetailView: View {
     @Environment(\.dismiss) var dismiss
     let split: Split
+    @State private var showFullScreen = false
 
     var body: some View {
         NavigationStack {
@@ -16,6 +17,21 @@ struct SplitDetailView: View {
                             .cornerRadius(18)
                             .shadow(color: .black.opacity(0.1), radius: 10, y: 4)
                             .padding(.horizontal, 24)
+                            .onTapGesture { showFullScreen = true }
+                            .sheet(isPresented: $showFullScreen) {
+                                ZStack {
+                                    Color.black.ignoresSafeArea()
+                                    VStack {
+                                        Spacer()
+                                        ZoomableImageView(image: uiImage)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        Spacer()
+                                        Button("Close") { showFullScreen = false }
+                                            .foregroundColor(.white)
+                                            .padding()
+                                    }
+                                }
+                            }
                     }
                     
                     // Header Info

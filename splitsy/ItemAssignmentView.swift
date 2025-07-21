@@ -80,7 +80,7 @@ struct ItemAssignmentView: View {
                 .padding(.horizontal, 4)
                 .frame(maxWidth: .infinity)
 
-                // People Section (vertical, full width)
+                // People Section
                 VStack(alignment: .leading, spacing: 0) {
                     Text("People")
                                     .font(.headline)
@@ -159,7 +159,7 @@ struct ItemAssignmentView: View {
 
                 Spacer()
 
-                // Modern Next Button
+                // Next Button
                 Button(action: {
                     let (shares, breakdown) = calculateUserShares()
                     userShares = shares
