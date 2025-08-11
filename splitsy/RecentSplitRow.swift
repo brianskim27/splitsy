@@ -3,6 +3,7 @@ import SwiftUI
 struct RecentSplitRow: View {
     let split: Split
     @State private var showDetail = false
+    @State private var isPressed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -16,7 +17,7 @@ struct RecentSplitRow: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                Text("$\(split.totalAmount, specifier: "%.2f")")
+                Text(String(format: "$%.2f", split.totalAmount))
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.green)
@@ -30,18 +31,28 @@ struct RecentSplitRow: View {
             .foregroundColor(.secondary)
             .padding(.top, 4)
         }
-        .padding(.vertical, 7)
-        .padding(.horizontal, 10)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 20)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .scaleEffect(isPressed ? 0.96 : 1.0)
+        .animation(.easeInOut(duration: 0.15), value: isPressed)
         .contentShape(Rectangle())
         .onTapGesture {
-            showDetail = true
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isPressed = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isPressed = false
+                }
+                showDetail = true
+            }
         }
         .sheet(isPresented: $showDetail) {
             SplitDetailView(split: split)
         }
-        .padding(.vertical, 4)
     }
 }

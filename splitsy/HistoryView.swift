@@ -28,15 +28,13 @@ struct HistoryView: View {
                 }
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    LazyVStack(spacing: 12) {
                         ForEach(Array(filteredSplits.enumerated()), id: \.element.id) { (index, split) in
                             RecentSplitRow(split: split)
-                            if index < filteredSplits.count - 1 {
-                                Divider()
-                            }
                         }
                     }
-                    .padding(.bottom, 60)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 100) // Extra padding for navigation bar
                 }
             }
         }
