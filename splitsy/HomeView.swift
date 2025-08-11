@@ -5,52 +5,417 @@ import CoreLocation
 struct HomeView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @State private var showNewSplit = false
+    
+    private var uniquePeopleThisMonth: Int {
+        let calendar = Calendar.current
+        let now = Date()
+        let currentMonthSplits = splitHistoryManager.pastSplits.filter { split in
+            calendar.isDate(split.date, equalTo: now, toGranularity: .month)
+        }
+        let allPeople = currentMonthSplits.flatMap { Array($0.userShares.keys) }
+        return Set(allPeople).count
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Text("Hi, Brian!")
-                .font(.largeTitle)
-                .bold()
-                .padding(.top)
-
-            HStack(spacing: 6) {
-                Image(systemName: "chart.pie.fill")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                Text("You've split with 4 people so far this month.")   // Placeholder fun fact
-                    .font(.body)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.bottom, 4)
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Recent Splits")
-                    .font(.title2)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("Hi, Brian!")
+                    .font(.largeTitle)
                     .bold()
+                    .padding(.top)
+                
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.pie.fill")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Text("You've split with \(uniquePeopleThisMonth) people so far this month.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.bottom, 4)
+                
+                // Enhanced Statistics Dashboard
+                StatisticsDashboard()
                     .padding(.bottom, 8)
+                
+                // Recent Splits Section with Card Style
+                RecentSplitsSection()
+                    .padding(.bottom, 100)
+            }
+            .padding(.horizontal)
+            .fullScreenCover(isPresented: $showNewSplit) {
+                NewSplitFlowView()
+            }
+        }
+    }
+}
 
-                if splitHistoryManager.pastSplits.isEmpty {
+// Recent Splits Section with Card Style
+struct RecentSplitsSection: View {
+    @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Recent Splits")
+                .font(.title2)
+                .bold()
+            
+            if splitHistoryManager.pastSplits.isEmpty {
+                VStack {
                     Text("No recent splits yet.")
                         .foregroundColor(.secondary)
-                        .padding(.vertical, 16)
-                } else {
-                    let splits = Array(splitHistoryManager.pastSplits.prefix(3))
-                    ForEach(Array(splits.enumerated()), id: \ .element.id) { (index, split) in
+                        .padding(.vertical, 32)
+                }
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+            } else {
+                let splits = Array(splitHistoryManager.pastSplits.prefix(3))
+                VStack(spacing: 12) {
+                    ForEach(Array(splits.enumerated()), id: \.element.id) { (index, split) in
                         RecentSplitRow(split: split)
-                        if index < splits.count - 1 {
-                            Divider()
-                        }
                     }
                 }
             }
-            .padding(.top, 8)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(16)
+    }
+}
 
+// Enhanced Statistics Dashboard
+struct StatisticsDashboard: View {
+    @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @State private var selectedDate = Date()
+    @State private var showMonthPicker = false
+    
+    private var selectedMonthSplits: [Split] {
+        let calendar = Calendar.current
+        return splitHistoryManager.pastSplits.filter { split in
+            calendar.isDate(split.date, equalTo: selectedDate, toGranularity: .month)
+        }
+    }
+    
+    private var availableMonths: [Date] {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Get all unique months from past splits
+        let splitMonths = Set(splitHistoryManager.pastSplits.map { split in
+            calendar.dateInterval(of: .month, for: split.date)?.start ?? split.date
+        })
+        
+        // Add current month if it has data
+        let currentMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
+        if splitMonths.contains(currentMonth) {
+            // Return current month first, then other months
+            return [currentMonth] + splitMonths.filter { !calendar.isDate($0, equalTo: currentMonth, toGranularity: .month) }.sorted(by: >)
+        } else {
+            // Return all months sorted in descending order
+            return splitMonths.sorted(by: >)
+        }
+    }
+    
+    private var totalMonthlySpending: Double {
+        selectedMonthSplits.reduce(0) { $0 + $1.totalAmount }
+    }
+    
+    private var averageSplitAmount: Double {
+        guard !selectedMonthSplits.isEmpty else { return 0 }
+        return totalMonthlySpending / Double(selectedMonthSplits.count)
+    }
+    
+    private var uniquePeopleThisMonth: Int {
+        let allPeople = selectedMonthSplits.flatMap { Array($0.userShares.keys) }
+        return Set(allPeople).count
+    }
+    
+    private var mostFrequentPartner: String? {
+        let allPeople = selectedMonthSplits.flatMap { Array($0.userShares.keys) }
+        let frequency = Dictionary(grouping: allPeople, by: { $0 })
+            .mapValues { $0.count }
+        return frequency.max(by: { $0.value < $1.value })?.key
+    }
+    
+    private var moneySaved: Double {
+        // Calculate how much you saved by splitting vs paying full amounts
+        selectedMonthSplits.reduce(0) { total, split in
+            let yourShare = split.userShares["Brian"] ?? 0
+            let fullAmount = split.totalAmount
+            return total + (fullAmount - yourShare)
+        }
+    }
+    
+    private var monthYearString: String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Check if selected date is current month
+        if calendar.isDate(selectedDate, equalTo: now, toGranularity: .month) {
+            return "This Month"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: selectedDate)
+        }
+    }
+    
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Button(action: {
+                        showMonthPicker.toggle()
+                    }) {
+                        HStack(spacing: 4) {
+                            Text(monthYearString)
+                                .font(.title2)
+                                .bold()
+                                .foregroundColor(.primary)
+                            
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .rotationEffect(.degrees(showMonthPicker ? 180 : 0))
+                                .animation(.easeInOut(duration: 0.2), value: showMonthPicker)
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    Spacer()
+                }
+                
+                // Main Stats Grid
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: 12) {
+                    StatCard(
+                        title: "Total Spent",
+                        value: String(format: "$%.2f", totalMonthlySpending),
+                        icon: "dollarsign.circle.fill",
+                        color: .green
+                    )
+                    
+                    StatCard(
+                        title: "Money Saved",
+                        value: String(format: "$%.2f", moneySaved),
+                        icon: "arrow.down.circle.fill",
+                        color: .blue
+                    )
+                    
+                    StatCard(
+                        title: "Splits",
+                        value: "\(selectedMonthSplits.count)",
+                        icon: "chart.pie.fill",
+                        color: .orange
+                    )
+                    
+                    StatCard(
+                        title: "People",
+                        value: "\(uniquePeopleThisMonth)",
+                        icon: "person.2.fill",
+                        color: .purple
+                    )
+                }
+                
+                // Additional Insights
+                VStack(alignment: .leading, spacing: 12) {
+                    if !selectedMonthSplits.isEmpty {
+                        InsightRow(
+                            icon: "chart.line.uptrend.xyaxis",
+                            title: "Average Split",
+                            value: String(format: "$%.2f", averageSplitAmount)
+                        )
+                        
+                        if let partner = mostFrequentPartner {
+                            InsightRow(
+                                icon: "person.fill",
+                                title: "Most Frequent Partner",
+                                value: partner
+                            )
+                        }
+                    }
+                }
+                .padding(.top, 8)
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(16)
+            
+            // Month Picker Dropdown - positioned to overlap
+            if showMonthPicker {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(availableMonths.enumerated()), id: \.offset) { index, month in
+                        MonthOptionButton(
+                            month: month,
+                            isSelected: Calendar.current.isDate(month, equalTo: selectedDate, toGranularity: .month),
+                            onTap: {
+                                selectedDate = month
+                                showMonthPicker = false
+                            }
+                        )
+                    }
+                }
+                .background(Color(.systemBackground))
+                .cornerRadius(8)
+                .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+                .offset(x: 15, y: 45) // Position directly below the month text
+                .frame(width: 135) // Allow natural width based on content
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .zIndex(1) // Ensure it appears above the statistics
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showMonthPicker)
+    }
+}
+
+// Individual Stat Card
+struct StatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(color)
+                Spacer()
+            }
+            
+            Text(value)
+                .font(.title2)
+                .bold()
+                .foregroundColor(.primary)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+}
+
+// Insight Row
+struct InsightRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.subheadline)
+                .foregroundColor(.blue)
+                .frame(width: 20)
+            
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
             Spacer()
+            
+            Text(value)
+                .font(.subheadline)
+                .bold()
+                .foregroundColor(.primary)
         }
-        .padding(.horizontal)
-        .fullScreenCover(isPresented: $showNewSplit) {
-            NewSplitFlowView()
+        .padding(.horizontal, 4)
+    }
+}
+
+// Month Option Button
+struct MonthOptionButton: View {
+    let month: Date
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    private var monthString: String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Check if this month is current month
+        if calendar.isDate(month, equalTo: now, toGranularity: .month) {
+            return "This Month"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM yyyy"
+            return formatter.string(from: month)
         }
+    }
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack {
+                Text(monthString)
+                    .font(.subheadline)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                    .foregroundColor(isSelected ? .white : .primary)
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                }
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .frame(minWidth: 0, maxWidth: .infinity)
+            .background(isSelected ? Color.blue : Color.clear)
+            .overlay(
+                Rectangle()
+                    .stroke(isSelected ? Color.clear : Color(.systemGray4), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// Corner Radius Modifier
+struct CornerRadiusModifier: ViewModifier {
+    let isFirst: Bool
+    let isLast: Bool
+    
+    func body(content: Content) -> some View {
+        if isFirst && isLast {
+            // Single item - round all corners
+            content.cornerRadius(8)
+        } else if isFirst {
+            // First item - round top corners
+            content.cornerRadius(8, corners: [.topLeft, .topRight])
+        } else if isLast {
+            // Last item - round bottom corners
+            content.cornerRadius(8, corners: [.bottomLeft, .bottomRight])
+        } else {
+            // Middle item - no corner radius
+            content
+        }
+    }
+}
+
+// Corner Radius Extension
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+        return Path(path.cgPath)
     }
 }
 
