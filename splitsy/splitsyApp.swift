@@ -5,8 +5,11 @@ struct splitsyApp: App {
     @StateObject private var splitHistoryManager = SplitHistoryManager()
     var body: some Scene {
         WindowGroup {
-            MainTabView()
-                .environmentObject(splitHistoryManager)
+            NavigationStack {
+                MainTabView()
+                    .environmentObject(splitHistoryManager)
+            }
+            .preferredColorScheme(.light)
         }
     }
 }

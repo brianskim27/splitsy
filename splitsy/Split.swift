@@ -6,7 +6,7 @@ struct ItemDetail: Codable, Hashable {
     let cost: Double
 }
 
-struct Split: Identifiable, Codable {
+struct Split: Identifiable, Codable, Equatable {
     let id: UUID
     var description: String?
     let date: Date

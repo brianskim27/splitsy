@@ -199,20 +199,23 @@ struct ItemAssignmentView: View {
     }
     
     private var isNextButtonEnabled: Bool {
-        return users.contains { !$0.assignedItemIDs.isEmpty }
+        // Cache the result to avoid repeated computation
+        return !users.isEmpty && users.contains { !$0.assignedItemIDs.isEmpty }
     }
     
-    // Add User Logic
+    // Add user
     private func addUser() {
-        guard !newUserName.isEmpty else {
+        let trimmedName = newUserName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
             return
         }
 
-        guard !users.contains(where: { $0.name == newUserName }) else {
+        if users.contains(where: { $0.name == trimmedName }) {
+            errorMessage = "User already exists"
             return
         }
 
-        users.append(User(id: UUID().uuidString, name: newUserName, assignedItemIDs: []))
+        users.append(User(id: UUID().uuidString, name: trimmedName, assignedItemIDs: []))
         newUserName = ""
         errorMessage = nil
     }
