@@ -7,6 +7,8 @@ struct NewSplitFlowView: View {
     @State private var step: Int = 0
     @State private var receiptImage: UIImage? = nil
     @State private var showImagePicker = false
+    @State private var showCamera = false
+    @State private var showGallery = false
     @State private var imagePickerSource: ImagePickerSourceType = .photoLibrary
     @State private var proceedFromReceiptInput = false
     @State private var proceedFromAssignment = false
@@ -23,12 +25,12 @@ struct NewSplitFlowView: View {
                     case 0:
                         ChooseSourceStep(
                             onCamera: {
-                                imagePickerSource = .camera
-                                showImagePicker = true
+                                // print("Camera button tapped")
+                                showCamera = true
                             },
                             onGallery: {
-                                imagePickerSource = .photoLibrary
-                                showImagePicker = true
+                                // print("Gallery button tapped")
+                                showGallery = true
                             }
                         )
                     case 1:
@@ -75,13 +77,21 @@ struct NewSplitFlowView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding()
-            .sheet(isPresented: $showImagePicker, onDismiss: {
+            .sheet(isPresented: $showCamera, onDismiss: {
                 if receiptImage != nil {
                     items.removeAll()
                     step = 1
                 }
             }) {
-                ImagePicker(image: $receiptImage, sourceType: imagePickerSource)
+                ImagePicker(image: $receiptImage, sourceType: .camera)
+            }
+            .sheet(isPresented: $showGallery, onDismiss: {
+                if receiptImage != nil {
+                    items.removeAll()
+                    step = 1
+                }
+            }) {
+                ImagePicker(image: $receiptImage, sourceType: .photoLibrary)
             }
             .onChange(of: proceedFromReceiptInput) { oldValue, newValue in
                 if newValue {
