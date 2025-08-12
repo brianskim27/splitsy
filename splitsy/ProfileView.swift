@@ -1,4 +1,5 @@
 import SwiftUI
+
 struct ProfileView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @State private var showNewSplit = false

@@ -1,6 +1,4 @@
 import SwiftUI
-import MapKit
-import CoreLocation
 
 struct HomeView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
@@ -34,11 +32,11 @@ struct HomeView: View {
                 }
                 .padding(.bottom, 4)
                 
-                // Enhanced Statistics Dashboard
+                // Statistics Dashboard
                 StatisticsDashboard()
                     .padding(.bottom, 8)
                 
-                // Recent Splits Section with Card Style
+                // Recent Splits Section
                 RecentSplitsSection()
                     .padding(.bottom, 100)
             }
@@ -84,7 +82,7 @@ struct RecentSplitsSection: View {
     }
 }
 
-// Enhanced Statistics Dashboard
+// Statistics Dashboard
 struct StatisticsDashboard: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @State private var selectedDate = Date()
@@ -191,33 +189,37 @@ struct StatisticsDashboard: View {
                     GridItem(.flexible()),
                     GridItem(.flexible())
                 ], spacing: 12) {
-                    StatCard(
-                        title: "Total Spent",
-                        value: String(format: "$%.2f", totalMonthlySpending),
-                        icon: "dollarsign.circle.fill",
-                        color: .green
-                    )
-                    
-                    StatCard(
-                        title: "Money Saved",
-                        value: String(format: "$%.2f", moneySaved),
-                        icon: "arrow.down.circle.fill",
-                        color: .blue
-                    )
-                    
-                    StatCard(
-                        title: "Splits",
-                        value: "\(selectedMonthSplits.count)",
-                        icon: "chart.pie.fill",
-                        color: .orange
-                    )
-                    
-                    StatCard(
-                        title: "People",
-                        value: "\(uniquePeopleThisMonth)",
-                        icon: "person.2.fill",
-                        color: .purple
-                    )
+                                    StatCard(
+                    title: "Total Spent",
+                    value: String(format: "$%.2f", totalMonthlySpending),
+                    icon: "dollarsign.circle.fill",
+                    color: .green,
+                    statType: .totalSpent
+                )
+                
+                StatCard(
+                    title: "Money Saved",
+                    value: String(format: "$%.2f", moneySaved),
+                    icon: "arrow.down.circle.fill",
+                    color: .blue,
+                    statType: .moneySaved
+                )
+                
+                StatCard(
+                    title: "Splits",
+                    value: "\(selectedMonthSplits.count)",
+                    icon: "chart.pie.fill",
+                    color: .orange,
+                    statType: .splits
+                )
+                
+                StatCard(
+                    title: "People",
+                    value: "\(uniquePeopleThisMonth)",
+                    icon: "person.2.fill",
+                    color: .purple,
+                    statType: .people
+                )
                 }
                 
                 // Additional Insights
@@ -244,7 +246,7 @@ struct StatisticsDashboard: View {
             .background(Color(.systemGray6))
             .cornerRadius(16)
             
-            // Month Picker Dropdown - positioned to overlap
+            // Month Picker Dropdown
             if showMonthPicker {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(availableMonths.enumerated()), id: \.offset) { index, month in
@@ -268,6 +270,11 @@ struct StatisticsDashboard: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showMonthPicker)
+        .onTapGesture {
+            if showMonthPicker {
+                showMonthPicker = false
+            }
+        }
     }
 }
 
@@ -277,29 +284,37 @@ struct StatCard: View {
     let value: String
     let icon: String
     let color: Color
+    let statType: DetailedStatsView.StatType
+    @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
+        NavigationLink(destination: DetailedStatsView(splitHistoryManager: splitHistoryManager, statType: statType)) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.title2)
+                        .foregroundColor(color)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Text(value)
                     .font(.title2)
-                    .foregroundColor(color)
-                Spacer()
+                    .bold()
+                    .foregroundColor(.primary)
+                
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            
-            Text(value)
-                .font(.title2)
-                .bold()
-                .foregroundColor(.primary)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

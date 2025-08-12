@@ -16,9 +16,9 @@ struct MainTabView: View {
             Group {
                 switch selectedTab {
                 case .home:
-                    NavigationStack { HomeView() }
+                    HomeView()
                 case .profile:
-                    NavigationStack { ProfileView() }
+                    ProfileView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -8,7 +8,7 @@ struct SplitDetailView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 12) {
                     // Receipt Image
                     if let imageData = split.receiptImageData, let uiImage = UIImage(data: imageData) {
                         Image(uiImage: uiImage)
