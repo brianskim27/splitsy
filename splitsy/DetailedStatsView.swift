@@ -400,7 +400,7 @@ struct DetailedStatsView: View {
                             .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
                             .offset(x: 16, y: 40) // Position directly below the period selector button
                             .frame(width: 156) // Allow natural width based on content
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .topLeading)))
                             .zIndex(1) // Ensure it appears above other elements
                         }
                     }
