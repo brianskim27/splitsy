@@ -77,6 +77,7 @@ struct NewSplitFlowView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding()
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .sheet(isPresented: $showCamera, onDismiss: {
                 if receiptImage != nil {
                     items.removeAll()
