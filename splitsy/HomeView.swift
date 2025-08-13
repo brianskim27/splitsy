@@ -87,6 +87,8 @@ struct StatisticsDashboard: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @State private var selectedDate = Date()
     @State private var showMonthPicker = false
+    @State private var animateButton = false
+    @State private var pressedMonth: Date?
     
     private var selectedMonthSplits: [Split] {
         let calendar = Calendar.current
@@ -165,6 +167,12 @@ struct StatisticsDashboard: View {
                 HStack {
                     Button(action: {
                         showMonthPicker.toggle()
+                        
+                        // Trigger animation when dropdown is toggled
+                        animateButton = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            animateButton = false
+                        }
                     }) {
                         HStack(spacing: 4) {
                             Text(monthYearString)
@@ -178,10 +186,12 @@ struct StatisticsDashboard: View {
                                 .rotationEffect(.degrees(showMonthPicker ? 180 : 0))
                                 .animation(.easeInOut(duration: 0.2), value: showMonthPicker)
                         }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    Spacer()
+                                         }
+                     .buttonStyle(PlainButtonStyle())
+                     .scaleEffect(animateButton ? 0.95 : 1.0)
+                     .animation(.easeInOut(duration: 0.1), value: animateButton)
+                     
+                     Spacer()
                 }
                 
                 // Main Stats Grid
@@ -257,11 +267,15 @@ struct StatisticsDashboard: View {
                         MonthOptionButton(
                             month: month,
                             isSelected: Calendar.current.isDate(month, equalTo: selectedDate, toGranularity: .month),
+                            isPressed: pressedMonth == month,
                             onTap: {
                                 selectedDate = month
                                 showMonthPicker = false
                             }
                         )
+                        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { isPressing in
+                            pressedMonth = isPressing ? month : nil
+                        }, perform: {})
                     }
                 }
                 .background(Color(.systemBackground))
@@ -355,6 +369,7 @@ struct InsightRow: View {
 struct MonthOptionButton: View {
     let month: Date
     let isSelected: Bool
+    let isPressed: Bool
     let onTap: () -> Void
     
     private var monthString: String {
@@ -372,31 +387,38 @@ struct MonthOptionButton: View {
     }
     
     var body: some View {
-        Button(action: onTap) {
-            HStack {
-                Text(monthString)
-                    .font(.subheadline)
-                    .fontWeight(isSelected ? .semibold : .regular)
-                    .foregroundColor(isSelected ? .white : .primary)
-                
-                Spacer()
-                
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                }
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .frame(minWidth: 0, maxWidth: .infinity)
-            .background(isSelected ? Color.blue : Color.clear)
-            .overlay(
-                Rectangle()
-                    .stroke(isSelected ? Color.clear : Color(.systemGray4), lineWidth: 0.5)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
+                                Button(action: onTap) {
+                            HStack {
+                                Text(monthString)
+                                    .font(.subheadline)
+                                    .fontWeight(isSelected ? .semibold : .regular)
+                                    .foregroundColor(isSelected ? .white : .primary)
+                                
+                                Spacer()
+                                
+                                if isSelected {
+                                    Image(systemName: "checkmark")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .contentShape(Rectangle())
+                        }
+                        .background(
+                            Group {
+                                if isSelected {
+                                    Color.blue
+                                } else if isPressed {
+                                    Color(.systemGray5)
+                                } else {
+                                    Color.clear
+                                }
+                            }
+                        )
+                        .buttonStyle(PlainButtonStyle())
     }
 }
 

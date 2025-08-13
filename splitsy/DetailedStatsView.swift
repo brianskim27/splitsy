@@ -8,6 +8,8 @@ struct DetailedStatsView: View {
     @State private var selectedPeriod: TimePeriod = .selectedMonth
     @State private var showPeriodDropdown = false
     @State private var selectedDataPoint: MonthData?
+    @State private var animateButton = false
+    @State private var pressedPeriod: TimePeriod?
     
     enum StatType {
         case totalSpent
@@ -197,6 +199,12 @@ struct DetailedStatsView: View {
                             HStack {
                                 Button(action: {
                                     showPeriodDropdown.toggle()
+                                    
+                                    // Trigger animation when dropdown is toggled
+                                    animateButton = true
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        animateButton = false
+                                    }
                                 }) {
                                     HStack {
                                         Text(selectedPeriod.rawValue)
@@ -212,9 +220,11 @@ struct DetailedStatsView: View {
                                     .padding(.vertical, 8)
                                     .background(Color(.systemGray6))
                                     .cornerRadius(8)
-                                }
-                                
-                                Spacer()
+                                                                 }
+                                 .scaleEffect(animateButton ? 0.95 : 1.0)
+                                 .animation(.easeInOut(duration: 0.1), value: animateButton)
+                                 
+                                 Spacer()
                             }
                             .padding(.horizontal)
                             
@@ -395,25 +405,41 @@ struct DetailedStatsView: View {
                             VStack(alignment: .leading, spacing: 0) {
                                 ForEach(TimePeriod.allCases, id: \.self) { period in
                                     Button(action: {
-                                        selectedPeriod = period
-                                        showPeriodDropdown = false
-                                    }) {
-                                        HStack {
-                                            Text(period.rawValue)
-                                                .font(.subheadline)
-                                                .foregroundColor(selectedPeriod == period ? .white : .primary)
-                                            Spacer()
-                                            if selectedPeriod == period {
-                                                Image(systemName: "checkmark")
-                                                    .font(.caption)
-                                                    .foregroundColor(.white)
-                                            }
+                                    selectedPeriod = period
+                                    showPeriodDropdown = false
+                                    pressedPeriod = nil
+                                }) {
+                                    HStack {
+                                        Text(period.rawValue)
+                                            .font(.subheadline)
+                                            .foregroundColor(selectedPeriod == period ? .white : .primary)
+                                        Spacer()
+                                        if selectedPeriod == period {
+                                            Image(systemName: "checkmark")
+                                                .font(.caption)
+                                                .foregroundColor(.white)
                                         }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(selectedPeriod == period ? statType.color : Color.clear)
                                     }
-                                    .buttonStyle(PlainButtonStyle())
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
+                                }
+                                .background(
+                                    Group {
+                                        if selectedPeriod == period {
+                                            statType.color
+                                        } else if pressedPeriod == period {
+                                            Color(.systemGray5)
+                                        } else {
+                                            Color.clear
+                                        }
+                                    }
+                                )
+                                .buttonStyle(PlainButtonStyle())
+                                .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { isPressing in
+                                    pressedPeriod = isPressing ? period : nil
+                                }, perform: {})
                                 }
                             }
                             .background(Color(.systemBackground))
