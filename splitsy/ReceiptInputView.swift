@@ -116,12 +116,12 @@ struct ReceiptInputView: View {
                                     .bold()
                                     .multilineTextAlignment(.leading)
                                         }
+                                Spacer()
                                 Text("$\(item.cost, specifier: "%.2f")")
                                     .foregroundColor(.green)
                                             .font(.subheadline)
                                     .bold()
-                                            .padding(.leading, 8)
-                                        Spacer()
+                                        .padding(.trailing, 8)
                                         Button(action: {
                                             editingItemId = item.id
                                             editingItemName = item.name
@@ -129,11 +129,10 @@ struct ReceiptInputView: View {
                                             Image(systemName: "pencil")
                                                 .foregroundColor(.blue)
                                         }
-                                        .padding(.trailing, 4)
+                                        .padding(.trailing, 8)
                                         Button(action: { removeItemById(item.id) }) {
                                             Image(systemName: "trash")
                                                 .foregroundColor(.red)
-                                                .padding(8)
                                         }
                                         .accessibilityLabel("Delete item")
                                     }

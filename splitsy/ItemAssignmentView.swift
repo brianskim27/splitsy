@@ -110,6 +110,10 @@ struct ItemAssignmentView: View {
                                                 .lineLimit(1)
                                                 .truncationMode(.tail)
                                             Spacer()
+                                            Button(action: { removeUser(user) }) {
+                                                Image(systemName: "trash")
+                                                    .foregroundColor(.red)
+                                            }
                                         }
                                         if !user.assignedItemIDs.isEmpty {
                                             ScrollView(.horizontal, showsIndicators: false) {
@@ -218,6 +222,21 @@ struct ItemAssignmentView: View {
         users.append(User(id: UUID().uuidString, name: trimmedName, assignedItemIDs: []))
         newUserName = ""
         errorMessage = nil
+    }
+
+    // Remove user
+    private func removeUser(_ user: User) {
+        // First, unassign all items from this user
+        for itemID in user.assignedItemIDs {
+            if let item = items.first(where: { $0.id == itemID }) {
+                unassignItem(item, from: user)
+            }
+        }
+        
+        // Then remove the user from the users array
+        if let userIndex = users.firstIndex(where: { $0.id == user.id }) {
+            users.remove(at: userIndex)
+        }
     }
 
     // Select/Deselect Items
