@@ -181,239 +181,240 @@ struct DetailedStatsView: View {
         ZStack {
             NavigationStack {
                 VStack(spacing: 20) {
-
-                // Period Selector Dropdown
-                HStack {
-                    Button(action: {
-                        showPeriodDropdown.toggle()
-                    }) {
-                        HStack {
-                            Text(selectedPeriod.rawValue)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.primary)
-                            Image(systemName: "chevron.down")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .rotationEffect(.degrees(showPeriodDropdown ? 180 : 0))
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                    }
                     
-                    Spacer()
-                }
-                .padding(.horizontal)
-                
-                // Period Dropdown
-                if showPeriodDropdown {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(TimePeriod.allCases, id: \.self) { period in
-                            Button(action: {
-                                selectedPeriod = period
-                                showPeriodDropdown = false
-                            }) {
-                                HStack {
-                                    Text(period.rawValue)
-                                        .font(.subheadline)
-                                        .foregroundColor(selectedPeriod == period ? .white : .primary)
-                                    Spacer()
-                                    if selectedPeriod == period {
-                                        Image(systemName: "checkmark")
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                    }
-                                                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(selectedPeriod == period ? statType.color : Color.clear)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-
-                        }
-                    }
-                    .background(Color(.systemBackground))
-                    .cornerRadius(8)
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-                    .padding(.horizontal)
-                    .offset(y: -8)
-                    .zIndex(2)
-                }
-                
-                // Chart
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Image(systemName: statType.icon)
-                            .font(.title2)
-                            .foregroundColor(statType.color)
-                        Text(statType.title)
-                            .font(.headline)
-                            .bold()
-                        Spacer()
-                    }
-                    
-                    if chartData.isEmpty {
-                        VStack {
-                            Text("No data available")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .padding(.vertical, 40)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    } else {
-                        Chart(chartData) { data in
-                            LineMark(
-                                x: .value("Month", data.month),
-                                y: .value("Value", data.value)
-                            )
-                            .foregroundStyle(statType.color)
-                            .lineStyle(StrokeStyle(lineWidth: 3))
-                            
-                            AreaMark(
-                                x: .value("Month", data.month),
-                                y: .value("Value", data.value)
-                            )
-                            .foregroundStyle(statType.color.opacity(0.1))
-                            
-                            PointMark(
-                                x: .value("Month", data.month),
-                                y: .value("Value", data.value)
-                            )
-                            .foregroundStyle(statType.color)
-                        }
-                        .frame(height: 200)
-                        .chartYAxis {
-                            AxisMarks(position: .leading)
-                        }
-                        .chartXAxis {
-                            AxisMarks { value in
-                                if let monthString = value.as(String.self) {
-                                    AxisValueLabel {
-                                        Text(monthString)
-                                            .foregroundColor(selectedPeriod == .selectedMonth ? .primary : .secondary)
-                                    }
-                                } else {
-                                    AxisValueLabel()
-                                }
-                            }
-                        }
-                        .chartOverlay { proxy in
-                            ZStack {
-                                Rectangle()
-                                    .fill(.clear)
-                                    .contentShape(Rectangle())
-                                    .gesture(
-                                        DragGesture(minimumDistance: 0)
-                                            .onChanged { value in
-                                                let location = value.location
-                                                if let dataPoint = findDataPoint(at: location, proxy: proxy) {
-                                                    selectedDataPoint = dataPoint
-                                                }
-                                            }
-                                            .onEnded { _ in
-                                                // Keep the selected data point visible
-                                            }
-                                    )
-                                
-                                // Tooltip for selected data point
-                                if let selectedDataPoint = selectedDataPoint,
-                                   let xPosition = proxy.position(forX: selectedDataPoint.month),
-                                   let yPosition = proxy.position(forY: selectedDataPoint.value) {
-                                    VStack(spacing: 4) {
-                                        Text(selectedDataPoint.month)
+                    // Period Selector with Overlay Dropdown
+                    ZStack(alignment: .topLeading) {
+                        VStack(spacing: 20) {
+                            // Period Selector Button
+                            HStack {
+                                Button(action: {
+                                    showPeriodDropdown.toggle()
+                                }) {
+                                    HStack {
+                                        Text(selectedPeriod.rawValue)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+                                        Image(systemName: "chevron.down")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
-                                        Text(formatValue(selectedDataPoint.value))
-                                            .font(.subheadline)
-                                            .bold()
-                                            .foregroundColor(statType.color)
+                                            .rotationEffect(.degrees(showPeriodDropdown ? 180 : 0))
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color(.systemBackground))
-                                    .cornerRadius(6)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                                    .position(x: xPosition, y: yPosition - 30)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            
+                            // Chart
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Image(systemName: statType.icon)
+                                        .font(.title2)
+                                        .foregroundColor(statType.color)
+                                    Text(statType.title)
+                                        .font(.headline)
+                                        .bold()
+                                    Spacer()
+                                }
+                                
+                                if chartData.isEmpty {
+                                    VStack {
+                                        Text("No data available")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                            .padding(.vertical, 40)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                } else {
+                                    Chart(chartData) { data in
+                                        LineMark(
+                                            x: .value("Month", data.month),
+                                            y: .value("Value", data.value)
+                                        )
+                                        .foregroundStyle(statType.color)
+                                        .lineStyle(StrokeStyle(lineWidth: 3))
+                                        
+                                        AreaMark(
+                                            x: .value("Month", data.month),
+                                            y: .value("Value", data.value)
+                                        )
+                                        .foregroundStyle(statType.color.opacity(0.1))
+                                        
+                                        PointMark(
+                                            x: .value("Month", data.month),
+                                            y: .value("Value", data.value)
+                                        )
+                                        .foregroundStyle(statType.color)
+                                    }
+                                    .frame(height: 200)
+                                    .chartYAxis {
+                                        AxisMarks(position: .leading)
+                                    }
+                                    .chartXAxis {
+                                        AxisMarks { value in
+                                            if let monthString = value.as(String.self) {
+                                                AxisValueLabel {
+                                                    Text(monthString)
+                                                        .foregroundColor(selectedPeriod == .selectedMonth ? .primary : .secondary)
+                                                }
+                                            } else {
+                                                AxisValueLabel()
+                                            }
+                                        }
+                                    }
+                                    .chartOverlay { proxy in
+                                        ZStack {
+                                            Rectangle()
+                                                .fill(.clear)
+                                                .contentShape(Rectangle())
+                                                .gesture(
+                                                    DragGesture(minimumDistance: 0)
+                                                        .onChanged { value in
+                                                            let location = value.location
+                                                            if let dataPoint = findDataPoint(at: location, proxy: proxy) {
+                                                                selectedDataPoint = dataPoint
+                                                            }
+                                                        }
+                                                        .onEnded { _ in
+                                                            // Keep the selected data point visible
+                                                        }
+                                                )
+                                            
+                                            // Tooltip for selected data point
+                                            if let selectedDataPoint = selectedDataPoint,
+                                               let xPosition = proxy.position(forX: selectedDataPoint.month),
+                                               let yPosition = proxy.position(forY: selectedDataPoint.value) {
+                                                VStack(spacing: 4) {
+                                                    Text(selectedDataPoint.month)
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                    Text(formatValue(selectedDataPoint.value))
+                                                        .font(.subheadline)
+                                                        .bold()
+                                                        .foregroundColor(statType.color)
+                                                }
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color(.systemBackground))
+                                                .cornerRadius(6)
+                                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                                                .position(x: xPosition, y: yPosition - 30)
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    }
-                }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                .padding(.horizontal)
-
-                
-
-                
-                // Summary Stats
-                VStack(spacing: 12) {
-                    let currentValue = chartData.last?.value ?? 0
-                    let previousValue = chartData.count > 1 ? chartData[chartData.count - 2].value : 0
-                    let change = currentValue - previousValue
-                    let changePercent = previousValue > 0 ? (change / previousValue) * 100 : 0
-                    
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Current")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(formatValue(currentValue))
-                                .font(.title2)
-                                .bold()
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing) {
-                            Text("Change")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            HStack(spacing: 4) {
-                                Image(systemName: change >= 0 ? "arrow.up" : "arrow.down")
-                                    .font(.caption)
-                                Text(formatValue(abs(change)))
-                                    .font(.subheadline)
-                                    .bold()
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            .padding(.horizontal)
+                            
+                            // Summary Stats
+                            VStack(spacing: 12) {
+                                let currentValue = chartData.last?.value ?? 0
+                                let previousValue = chartData.count > 1 ? chartData[chartData.count - 2].value : 0
+                                let change = currentValue - previousValue
+                                let changePercent = previousValue > 0 ? (change / previousValue) * 100 : 0
+                                
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text("Current")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text(formatValue(currentValue))
+                                            .font(.title2)
+                                            .bold()
+                                    }
+                                    Spacer()
+                                    VStack(alignment: .trailing) {
+                                        Text("Change")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        HStack(spacing: 4) {
+                                            Image(systemName: change >= 0 ? "arrow.up" : "arrow.down")
+                                                .font(.caption)
+                                            Text(formatValue(abs(change)))
+                                                .font(.subheadline)
+                                                .bold()
+                                        }
+                                        .foregroundColor(change >= 0 ? .green : .red)
+                                    }
+                                }
+                                
+                                if previousValue > 0 {
+                                    HStack {
+                                        Text("vs previous period")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text("\(changePercent >= 0 ? "+" : "")\(changePercent, specifier: "%.1f")%")
+                                            .font(.caption)
+                                            .foregroundColor(changePercent >= 0 ? .green : .red)
+                                    }
+                                }
                             }
-                            .foregroundColor(change >= 0 ? .green : .red)
-                        }
-                    }
-                    
-                    if previousValue > 0 {
-                        HStack {
-                            Text("vs previous period")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                            
                             Spacer()
-                            Text("\(changePercent >= 0 ? "+" : "")\(changePercent, specifier: "%.1f")%")
-                                .font(.caption)
-                                .foregroundColor(changePercent >= 0 ? .green : .red)
+                        }
+                        
+                        // Period Dropdown - Positioned to hover over content
+                        if showPeriodDropdown {
+                            VStack(alignment: .leading, spacing: 0) {
+                                ForEach(TimePeriod.allCases, id: \.self) { period in
+                                    Button(action: {
+                                        selectedPeriod = period
+                                        showPeriodDropdown = false
+                                    }) {
+                                        HStack {
+                                            Text(period.rawValue)
+                                                .font(.subheadline)
+                                                .foregroundColor(selectedPeriod == period ? .white : .primary)
+                                            Spacer()
+                                            if selectedPeriod == period {
+                                                Image(systemName: "checkmark")
+                                                    .font(.caption)
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(selectedPeriod == period ? statType.color : Color.clear)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                            .background(Color(.systemBackground))
+                            .cornerRadius(8)
+                            .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+                            .offset(x: 16, y: 40) // Position directly below the period selector button
+                            .frame(width: 156) // Allow natural width based on content
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .zIndex(1) // Ensure it appears above other elements
                         }
                     }
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal)
-                
-                Spacer()
-            }
-            .padding(.top)
-            .navigationTitle("\(statType.title) Trends")
-            .navigationBarTitleDisplayMode(.large)
-            .onTapGesture {
-                if showPeriodDropdown {
-                    showPeriodDropdown = false
+                .padding(.top)
+                .navigationTitle("\(statType.title) Trends")
+                .navigationBarTitleDisplayMode(.large)
+                .onTapGesture {
+                    if showPeriodDropdown {
+                        showPeriodDropdown = false
+                    }
                 }
             }
-            }
-            
-
+            .animation(.easeInOut(duration: 0.3), value: showPeriodDropdown)
         }
     }
     
