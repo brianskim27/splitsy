@@ -4,6 +4,7 @@ import Charts
 struct DetailedStatsView: View {
     let splitHistoryManager: SplitHistoryManager
     let statType: StatType
+    let selectedMonth: Date
     @State private var selectedPeriod: TimePeriod = .selectedMonth
     @State private var showPeriodDropdown = false
     @State private var selectedDataPoint: MonthData?
@@ -57,7 +58,7 @@ struct DetailedStatsView: View {
             case .sixMonths: return 6
             case .oneYear: return 12
             case .ytd: return Calendar.current.component(.month, from: Date())
-            case .allTime: return 0 // Special case for all time
+            case .allTime: return 0
             }
         }
     }
@@ -69,16 +70,17 @@ struct DetailedStatsView: View {
         
         switch selectedPeriod {
         case .selectedMonth:
-            // For selected month, show weeks
-            let selectedMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
-            let weeksInMonth = calendar.range(of: .weekOfMonth, in: .month, for: selectedMonth)?.count ?? 4
+            let monthStart = calendar.dateInterval(of: .month, for: selectedMonth)?.start ?? selectedMonth
+            let weeksInMonth = calendar.range(of: .weekOfMonth, in: .month, for: monthStart)?.count ?? 4
             
             for week in 1...weeksInMonth {
-                let weekStart = calendar.date(byAdding: .weekOfYear, value: week - 1, to: selectedMonth) ?? selectedMonth
-                let weekEnd = calendar.date(byAdding: .weekOfYear, value: week, to: selectedMonth) ?? selectedMonth
+                let weekStart = calendar.dateInterval(of: .weekOfYear, for: monthStart)?.start ?? monthStart
+                let adjustedWeekStart = calendar.date(byAdding: .weekOfYear, value: week - 1, to: weekStart) ?? weekStart
+                
+                let weekEnd = calendar.date(byAdding: .day, value: 7, to: adjustedWeekStart) ?? adjustedWeekStart
                 
                 let weekSplits = splitHistoryManager.pastSplits.filter { split in
-                    split.date >= weekStart && split.date < weekEnd
+                    split.date >= adjustedWeekStart && split.date < weekEnd
                 }
                 
                 let value: Double
@@ -98,11 +100,18 @@ struct DetailedStatsView: View {
                     value = Double(Set(allPeople).count)
                 }
                 
-                data.append(MonthData(month: "Week \(week)", value: value))
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MMM d"
+                let weekLabel = formatter.string(from: adjustedWeekStart)
+                
+                let weekEndDate = calendar.date(byAdding: .day, value: -1, to: weekEnd) ?? weekEnd
+                let weekEndString = formatter.string(from: weekEndDate)
+                let fullWeekRange = "\(weekLabel) - \(weekEndString)"
+                
+                data.append(MonthData(month: weekLabel, value: value, fullWeekRange: fullWeekRange))
             }
             
         case .allTime:
-            // For all time, get all months from first split to current month
             guard let firstSplit = splitHistoryManager.pastSplits.last else { return [] }
             let firstMonth = calendar.dateInterval(of: .month, for: firstSplit.date)?.start ?? firstSplit.date
             let currentMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
@@ -134,13 +143,12 @@ struct DetailedStatsView: View {
                 formatter.dateFormat = "MMM yyyy"
                 let monthName = formatter.string(from: currentDate)
                 
-                data.append(MonthData(month: monthName, value: value))
+                data.append(MonthData(month: monthName, value: value, fullWeekRange: monthName))
                 
                 currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate) ?? currentDate
             }
             
         default:
-            // For other periods, show months
             for i in 0..<selectedPeriod.months {
                 if let monthDate = calendar.date(byAdding: .month, value: -i, to: now) {
                     let monthSplits = splitHistoryManager.pastSplits.filter { split in
@@ -168,7 +176,7 @@ struct DetailedStatsView: View {
                     formatter.dateFormat = "MMM"
                     let monthName = formatter.string(from: monthDate)
                     
-                    data.append(MonthData(month: monthName, value: value))
+                    data.append(MonthData(month: monthName, value: value, fullWeekRange: monthName))
                 }
             }
             data = data.reversed()
@@ -182,7 +190,7 @@ struct DetailedStatsView: View {
             NavigationStack {
                 VStack(spacing: 20) {
                     
-                    // Period Selector with Overlay Dropdown
+                    // Period Selector
                     ZStack(alignment: .topLeading) {
                         VStack(spacing: 20) {
                             // Period Selector Button
@@ -275,7 +283,7 @@ struct DetailedStatsView: View {
                                                 .fill(.clear)
                                                 .contentShape(Rectangle())
                                                 .gesture(
-                                                    DragGesture(minimumDistance: 0)
+                                                    DragGesture(minimumDistance: 1)
                                                         .onChanged { value in
                                                             let location = value.location
                                                             if let dataPoint = findDataPoint(at: location, proxy: proxy) {
@@ -283,16 +291,29 @@ struct DetailedStatsView: View {
                                                             }
                                                         }
                                                         .onEnded { _ in
-                                                            // Keep the selected data point visible
+                                                            // Clear the selected data point when drag ends
+                                                            selectedDataPoint = nil
                                                         }
                                                 )
+                                                .onTapGesture { location in
+                                                    // Handle tap to toggle data point visibility
+                                                    if let tappedDataPoint = findDataPoint(at: location, proxy: proxy) {
+                                                        if selectedDataPoint?.month == tappedDataPoint.month {
+                                                            selectedDataPoint = nil
+                                                        } else {
+                                                            selectedDataPoint = tappedDataPoint
+                                                        }
+                                                    } else {
+                                                        selectedDataPoint = nil
+                                                    }
+                                                }
                                             
                                             // Tooltip for selected data point
                                             if let selectedDataPoint = selectedDataPoint,
                                                let xPosition = proxy.position(forX: selectedDataPoint.month),
                                                let yPosition = proxy.position(forY: selectedDataPoint.value) {
                                                 VStack(spacing: 4) {
-                                                    Text(selectedDataPoint.month)
+                                                    Text(selectedDataPoint.fullWeekRange)
                                                         .font(.caption)
                                                         .foregroundColor(.secondary)
                                                     Text(formatValue(selectedDataPoint.value))
@@ -398,10 +419,10 @@ struct DetailedStatsView: View {
                             .background(Color(.systemBackground))
                             .cornerRadius(8)
                             .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
-                            .offset(x: 16, y: 40) // Position directly below the period selector button
-                            .frame(width: 156) // Allow natural width based on content
+                            .offset(x: 16, y: 40)
+                            .frame(width: 156)
                             .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .topLeading)))
-                            .zIndex(1) // Ensure it appears above other elements
+                            .zIndex(1)
                         }
                     }
                 }
@@ -443,4 +464,5 @@ struct MonthData: Identifiable {
     let id = UUID()
     let month: String
     let value: Double
+    let fullWeekRange: String
 }

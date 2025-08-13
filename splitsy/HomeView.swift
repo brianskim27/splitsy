@@ -110,7 +110,7 @@ struct StatisticsDashboard: View {
             // Return current month first, then other months
             return [currentMonth] + splitMonths.filter { !calendar.isDate($0, equalTo: currentMonth, toGranularity: .month) }.sorted(by: >)
         } else {
-            // Return all months sorted in descending order
+            // Return all months
             return splitMonths.sorted(by: >)
         }
     }
@@ -137,7 +137,7 @@ struct StatisticsDashboard: View {
     }
     
     private var moneySaved: Double {
-        // Calculate how much you saved by splitting vs paying full amounts
+        // Calculate how much saved by splitting vs paying full amounts
         selectedMonthSplits.reduce(0) { total, split in
             let yourShare = split.userShares["Brian"] ?? 0
             let fullAmount = split.totalAmount
@@ -194,7 +194,8 @@ struct StatisticsDashboard: View {
                     value: String(format: "$%.2f", totalMonthlySpending),
                     icon: "dollarsign.circle.fill",
                     color: .green,
-                    statType: .totalSpent
+                    statType: .totalSpent,
+                    selectedDate: selectedDate
                 )
                 
                 StatCard(
@@ -202,7 +203,8 @@ struct StatisticsDashboard: View {
                     value: String(format: "$%.2f", moneySaved),
                     icon: "arrow.down.circle.fill",
                     color: .blue,
-                    statType: .moneySaved
+                    statType: .moneySaved,
+                    selectedDate: selectedDate
                 )
                 
                 StatCard(
@@ -210,7 +212,8 @@ struct StatisticsDashboard: View {
                     value: "\(selectedMonthSplits.count)",
                     icon: "chart.pie.fill",
                     color: .orange,
-                    statType: .splits
+                    statType: .splits,
+                    selectedDate: selectedDate
                 )
                 
                 StatCard(
@@ -218,7 +221,8 @@ struct StatisticsDashboard: View {
                     value: "\(uniquePeopleThisMonth)",
                     icon: "person.2.fill",
                     color: .purple,
-                    statType: .people
+                    statType: .people,
+                    selectedDate: selectedDate
                 )
                 }
                 
@@ -285,10 +289,11 @@ struct StatCard: View {
     let icon: String
     let color: Color
     let statType: DetailedStatsView.StatType
+    let selectedDate: Date
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     
     var body: some View {
-        NavigationLink(destination: DetailedStatsView(splitHistoryManager: splitHistoryManager, statType: statType)) {
+        NavigationLink(destination: DetailedStatsView(splitHistoryManager: splitHistoryManager, statType: statType, selectedMonth: selectedDate)) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: icon)
@@ -402,16 +407,16 @@ struct CornerRadiusModifier: ViewModifier {
     
     func body(content: Content) -> some View {
         if isFirst && isLast {
-            // Single item - round all corners
+            // Single item
             content.cornerRadius(8)
         } else if isFirst {
-            // First item - round top corners
+            // First item
             content.cornerRadius(8, corners: [.topLeft, .topRight])
         } else if isLast {
-            // Last item - round bottom corners
+            // Last item
             content.cornerRadius(8, corners: [.bottomLeft, .bottomRight])
         } else {
-            // Middle item - no corner radius
+            // Middle item
             content
         }
     }
