@@ -187,6 +187,16 @@ struct DetailedStatsView: View {
         return data
     }
     
+    private var periodButtonTitle: String {
+        if selectedPeriod == .selectedMonth {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM"
+            return formatter.string(from: selectedMonth)
+        } else {
+            return selectedPeriod.rawValue
+        }
+    }
+    
     var body: some View {
         ZStack {
             NavigationStack {
@@ -207,7 +217,7 @@ struct DetailedStatsView: View {
                                     }
                                 }) {
                                     HStack {
-                                        Text(selectedPeriod.rawValue)
+                                        Text(periodButtonTitle)
                                             .font(.subheadline)
                                             .fontWeight(.medium)
                                             .foregroundColor(.primary)
