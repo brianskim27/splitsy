@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @State private var showNewSplit = false
+    @State private var showQuickSplit = false
     
     private var uniquePeopleThisMonth: Int {
         let calendar = Calendar.current
@@ -15,35 +16,74 @@ struct HomeView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("Hi, Brian!")
-                    .font(.largeTitle)
-                    .bold()
-                    .padding(.top)
-                
-                HStack(spacing: 6) {
-                    Image(systemName: "chart.pie.fill")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Text("You've split with \(uniquePeopleThisMonth) people so far this month.")
-                        .font(.body)
-                        .foregroundColor(.secondary)
+        ZStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    Text("Hi, Brian!")
+                        .font(.largeTitle)
+                        .bold()
+                        .padding(.top)
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "chart.pie.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text("You've split with \(uniquePeopleThisMonth) people so far this month.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.bottom, 4)
+                    
+                    // Statistics Dashboard
+                    StatisticsDashboard()
+                        .padding(.bottom, 8)
+                    
+                    // Recent Splits Section
+                    RecentSplitsSection()
+                        .padding(.bottom, 100)
                 }
-                .padding(.bottom, 4)
-                
-                // Statistics Dashboard
-                StatisticsDashboard()
-                    .padding(.bottom, 8)
-                
-                // Recent Splits Section
-                RecentSplitsSection()
-                    .padding(.bottom, 100)
+                .padding(.horizontal)
+                .fullScreenCover(isPresented: $showNewSplit) {
+                    NewSplitFlowView()
+                }
             }
-            .padding(.horizontal)
-            .fullScreenCover(isPresented: $showNewSplit) {
-                NewSplitFlowView()
+            
+            // Floating Quick Split Button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showQuickSplit = true
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "calculator")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            Text("Quick Split")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.blue, .cyan]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .cornerRadius(25)
+                        .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.trailing, 20)
+                }
+                .padding(.bottom, 120) // Above tab bar
             }
+        }
+        .sheet(isPresented: $showQuickSplit) {
+            QuickSplitView()
         }
     }
 }
