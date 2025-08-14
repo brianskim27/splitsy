@@ -10,6 +10,8 @@
 	<string>6.0</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo library to scan receipts.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need permission to save split exports to your photo library.</string>
 	<key>CFBundleVersion</key>
 	<string>1.0.0</string>
 	<key>CFBundleShortVersionString</key>
