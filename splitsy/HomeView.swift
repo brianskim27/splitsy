@@ -24,13 +24,39 @@ struct HomeView: View {
                         .bold()
                         .padding(.top)
                     
-                    HStack(spacing: 6) {
-                        Image(systemName: "chart.pie.fill")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text("You've split with \(uniquePeopleThisMonth) people so far this month.")
-                            .font(.body)
-                            .foregroundColor(.secondary)
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chart.pie.fill")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Text("You've split with \(uniquePeopleThisMonth) people so far this month.")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            showQuickSplit = true
+                        }) {
+                            HStack(spacing: 6) {
+                                Text("Quick Split")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .cyan]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(20)
+                            .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
+                        }
                     }
                     .padding(.bottom, 4)
                     
@@ -46,40 +72,6 @@ struct HomeView: View {
                 .fullScreenCover(isPresented: $showNewSplit) {
                     NewSplitFlowView()
                 }
-            }
-            
-            // Floating Quick Split Button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        showQuickSplit = true
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "calculator")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                            Text("Quick Split")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [.blue, .cyan]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .cornerRadius(25)
-                        .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
-                    }
-                    .padding(.trailing, 20)
-                }
-                .padding(.bottom, 120) // Above tab bar
             }
         }
         .sheet(isPresented: $showQuickSplit) {
