@@ -873,12 +873,12 @@ class CustomShareViewController: UIViewController {
         stackView.spacing = 16
         stackView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Add title
-        let titleLabel = UILabel()
-        titleLabel.text = "Split Breakdown"
-        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
-        titleLabel.textAlignment = .center
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        // Add export label
+        let exportLabel = UILabel()
+        exportLabel.text = "Export"
+        exportLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+        exportLabel.textAlignment = .center
+        exportLabel.translatesAutoresizingMaskIntoConstraints = false
         
         // Create tappable image container
         let imageContainer = UIView()
@@ -922,7 +922,7 @@ class CustomShareViewController: UIViewController {
         }
         
         // Add views to stack
-        stackView.addArrangedSubview(titleLabel)
+        stackView.addArrangedSubview(exportLabel)
         stackView.addArrangedSubview(imageContainer)
         stackView.addArrangedSubview(activityViewController.view)
         
@@ -1004,7 +1004,10 @@ class ImageActivityItemSource: NSObject, UIActivityItemSource {
     }
     
     func activityViewController(_ activityViewController: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
-        return "Split Breakdown"
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        let dateString = formatter.string(from: Date())
+        return "Quick Split - \(dateString)"
     }
     
     func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
@@ -1018,7 +1021,10 @@ class ImageActivityItemSource: NSObject, UIActivityItemSource {
     @available(iOS 13.0, *)
     func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
         let metadata = LPLinkMetadata()
-        metadata.title = "Split Breakdown"
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        let dateString = formatter.string(from: Date())
+        metadata.title = "Quick Split - \(dateString)"
         
         let imageProvider = NSItemProvider(object: image)
         metadata.imageProvider = imageProvider

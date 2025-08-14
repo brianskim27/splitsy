@@ -1,12 +1,11 @@
 import SwiftUI
 import UIKit
+import LinkPresentation
 
 struct SplitDetailView: View {
     @Environment(\.dismiss) var dismiss
     let split: Split
     @State private var showFullScreen = false
-    @State private var showShareSheet = false
-    @State private var shareItems: [Any] = []
     @State private var isPreparingShare = false
 
     var body: some View {
@@ -96,13 +95,8 @@ struct SplitDetailView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Button {
-                        if !isPreparingShare {
-                            Task {
-                                isPreparingShare = true
-                                await prepareShareItems()
-                                isPreparingShare = false
-                                presentShareSheet()
-                            }
+                        Task {
+                            await prepareAndPresentShareSheet()
                         }
                     } label: {
                         if isPreparingShare {
@@ -124,26 +118,19 @@ struct SplitDetailView: View {
 // MARK: - Share Logic
 extension SplitDetailView {
     @MainActor
-    private func prepareShareItems() async {
-        // Clear existing items first
-        shareItems = []
+    private func prepareAndPresentShareSheet() async {
+        isPreparingShare = true
         
-        // Add a small delay to ensure UI updates properly
-        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-        
-        // Only export the rendered split details image
-        if let splitImage = renderSplitAsImage() {
-            shareItems = [splitImage]
+        guard let splitImage = renderSplitAsImage() else {
+            isPreparingShare = false
+            return
         }
-    }
-    
-    private func presentShareSheet() {
-        guard !shareItems.isEmpty else { return }
         
         // Get the current view controller
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first,
               let rootViewController = window.rootViewController else {
+            isPreparingShare = false
             return
         }
         
@@ -153,27 +140,207 @@ extension SplitDetailView {
             topController = presentedViewController
         }
         
-        let activityViewController = UIActivityViewController(
-            activityItems: shareItems,
+        // Create custom share sheet with large image preview
+        let customShareController = SplitDetailCustomShareViewController(image: splitImage, split: split)
+        
+        isPreparingShare = false
+        topController.present(customShareController, animated: true)
+    }
+}
+
+// MARK: - Custom Share View Controller
+class SplitDetailCustomShareViewController: UIViewController {
+    private let image: UIImage
+    private let split: Split
+    private var activityViewController: UIActivityViewController?
+    
+    init(image: UIImage, split: Split) {
+        self.image = image
+        self.split = split
+        super.init(nibName: nil, bundle: nil)
+        
+        self.modalPresentationStyle = .pageSheet
+        
+        if let sheetController = self.sheetPresentationController {
+            sheetController.detents = [.large()]
+            sheetController.selectedDetentIdentifier = .large
+            sheetController.prefersGrabberVisible = true
+            sheetController.prefersScrollingExpandsWhenScrolledToEdge = false
+            sheetController.prefersEdgeAttachedInCompactHeight = true
+            sheetController.preferredCornerRadius = 20
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        view.backgroundColor = .systemBackground
+        setupUI()
+    }
+    
+    private func setupUI() {
+        // Create container stack view
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = 16
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add export label
+        let exportLabel = UILabel()
+        exportLabel.text = "Export"
+        exportLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+        exportLabel.textAlignment = .center
+        exportLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Create tappable image container
+        let imageContainer = UIView()
+        imageContainer.translatesAutoresizingMaskIntoConstraints = false
+        imageContainer.backgroundColor = .systemGray6
+        imageContainer.layer.cornerRadius = 16
+        imageContainer.clipsToBounds = true
+        
+        // Add large image preview
+        let imageView = UIImageView(image: image)
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isUserInteractionEnabled = true
+        
+        // Add tap gesture for zoom
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(imageViewTapped))
+        imageView.addGestureRecognizer(tapGesture)
+        
+        imageContainer.addSubview(imageView)
+        
+        // Create activity view controller
+        let imageSource = SplitDetailImageActivityItemSource(image: image, split: split)
+        activityViewController = UIActivityViewController(
+            activityItems: [imageSource],
             applicationActivities: nil
         )
         
-        // Enable all default Apple sharing activities
-        activityViewController.excludedActivityTypes = []
+        guard let activityViewController = activityViewController else { return }
         
-        // Configure sheet presentation to behave like iMessage share sheet
-        if let sheetController = activityViewController.sheetPresentationController {
-            sheetController.detents = [.medium(), .large()]
-            sheetController.selectedDetentIdentifier = .medium
-            sheetController.prefersGrabberVisible = false // No grab handle, drag anywhere
-            sheetController.prefersScrollingExpandsWhenScrolledToEdge = true // Allows dragging to expand
-            sheetController.prefersEdgeAttachedInCompactHeight = true
-            sheetController.largestUndimmedDetentIdentifier = .medium // Keep background dimmed when expanded
+        activityViewController.excludedActivityTypes = []
+        activityViewController.modalPresentationStyle = .none
+        
+        // Add activity controller as child
+        addChild(activityViewController)
+        activityViewController.view.translatesAutoresizingMaskIntoConstraints = false
+        activityViewController.view.backgroundColor = .clear
+        
+        // Add completion handler to dismiss when done
+        activityViewController.completionWithItemsHandler = { [weak self] _, _, _, _ in
+            self?.dismiss(animated: true)
         }
         
-        topController.present(activityViewController, animated: true)
+        // Add views to stack
+        stackView.addArrangedSubview(exportLabel)
+        stackView.addArrangedSubview(imageContainer)
+        stackView.addArrangedSubview(activityViewController.view)
+        
+        view.addSubview(stackView)
+        
+        // Setup constraints with wider layout
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            stackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            
+            // Make image container much larger
+            imageContainer.heightAnchor.constraint(equalToConstant: 300),
+            
+            // Image view fills container with padding
+            imageView.topAnchor.constraint(equalTo: imageContainer.topAnchor, constant: 12),
+            imageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor, constant: 12),
+            imageView.trailingAnchor.constraint(equalTo: imageContainer.trailingAnchor, constant: -12),
+            imageView.bottomAnchor.constraint(equalTo: imageContainer.bottomAnchor, constant: -12),
+            
+            activityViewController.view.heightAnchor.constraint(greaterThanOrEqualToConstant: 280)
+        ])
+        
+        activityViewController.didMove(toParent: self)
     }
     
+    @objc private func imageViewTapped() {
+        let zoomView = ZoomableImageView(image: image)
+        let hostingController = UIHostingController(rootView: 
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button {
+                            self.dismiss(animated: true)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title)
+                                .foregroundColor(.white)
+                                .background(Color.black.opacity(0.6))
+                                .clipShape(Circle())
+                        }
+                        .padding()
+                    }
+                    
+                    zoomView
+                        .onTapGesture {
+                            self.dismiss(animated: true)
+                        }
+                }
+            }
+        )
+        
+        hostingController.modalPresentationStyle = .fullScreen
+        present(hostingController, animated: true)
+    }
+}
+
+// MARK: - Split Detail Image Activity Item Source
+class SplitDetailImageActivityItemSource: NSObject, UIActivityItemSource {
+    private let image: UIImage
+    private let split: Split
+    
+    init(image: UIImage, split: Split) {
+        self.image = image
+        self.split = split
+        super.init()
+    }
+    
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        return image
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        return image
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
+        return split.description ?? "Split Details"
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
+        return image
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, dataTypeIdentifierForActivityType activityType: UIActivity.ActivityType?) -> String {
+        return "public.image"
+    }
+    
+    @available(iOS 13.0, *)
+    func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
+        let metadata = LPLinkMetadata()
+        metadata.title = split.description ?? "Split Details"
+        
+        let imageProvider = NSItemProvider(object: image)
+        metadata.imageProvider = imageProvider
+        
+        return metadata
+    }
 }
 
 // MARK: - Exportable View
