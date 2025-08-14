@@ -5,8 +5,9 @@ struct SplitDetailView: View {
     @Environment(\.dismiss) var dismiss
     let split: Split
     @State private var showFullScreen = false
-    @State private var showSaveResultAlert = false
-    @State private var saveResultMessage: String = ""
+    @State private var showShareSheet = false
+    @State private var shareItems: [Any] = []
+    @State private var isPreparingShare = false
 
     var body: some View {
         NavigationStack {
@@ -95,72 +96,84 @@ struct SplitDetailView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Button {
-                        saveSplitToPhotos()
+                        if !isPreparingShare {
+                            Task {
+                                isPreparingShare = true
+                                await prepareShareItems()
+                                isPreparingShare = false
+                                presentShareSheet()
+                            }
+                        }
                     } label: {
-                        Image(systemName: "square.and.arrow.down")
+                        if isPreparingShare {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "square.and.arrow.up")
+                        }
                     }
+                    .disabled(isPreparingShare)
                     Button("Done") { dismiss() }
                 }
             }
-            .alert("Export", isPresented: $showSaveResultAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(saveResultMessage)
-            }
+
         }
     }
 }
 
-// MARK: - Export Logic
+// MARK: - Share Logic
 extension SplitDetailView {
-    private func saveSplitToPhotos() {
-        let exportView = SplitDetailExportView(split: split)
-            .padding(16)
-            .frame(width: 900, alignment: .center)
-            .background(Color(.systemBackground))
-
-        if let image = renderAsImage(view: exportView) {
-            let saver = ImageSaver { success, error in
-                if success {
-                    saveResultMessage = "Saved to Photos."
-                } else {
-                    saveResultMessage = "Failed to save: \(error?.localizedDescription ?? "Unknown error")."
-                }
-                showSaveResultAlert = true
-            }
-            saver.writeToPhotoAlbum(image: image)
-        } else {
-            saveResultMessage = "Could not render export image."
-            showSaveResultAlert = true
-        }
-    }
-
     @MainActor
-    private func renderAsImage<V: View>(view: V) -> UIImage? {
-        if #available(iOS 16.0, *) {
-            let renderer = ImageRenderer(content: view)
-            renderer.proposedSize = .init(width: 900, height: nil)
-            renderer.scale = UIScreen.main.scale
-            renderer.isOpaque = true
-            return renderer.uiImage
-        } else {
-            // Fallback for iOS < 16 using UIHostingController snapshot
-            let controller = UIHostingController(rootView: view)
-            let targetSize = CGSize(width: 900, height: UIView.layoutFittingCompressedSize.height)
-            controller.view.bounds = CGRect(origin: .zero, size: targetSize)
-            controller.view.backgroundColor = .systemBackground
-            let size = controller.sizeThatFits(in: CGSize(width: targetSize.width, height: CGFloat.greatestFiniteMagnitude))
-            controller.view.bounds.size = size
-
-            let format = UIGraphicsImageRendererFormat()
-            format.scale = UIScreen.main.scale
-            format.opaque = true
-            let renderer = UIGraphicsImageRenderer(size: size, format: format)
-            return renderer.image { _ in
-                controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
-            }
+    private func prepareShareItems() async {
+        // Clear existing items first
+        shareItems = []
+        
+        // Add a small delay to ensure UI updates properly
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        
+        // Only export the rendered split details image
+        if let splitImage = renderSplitAsImage() {
+            shareItems = [splitImage]
         }
     }
+    
+    private func presentShareSheet() {
+        guard !shareItems.isEmpty else { return }
+        
+        // Get the current view controller
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootViewController = window.rootViewController else {
+            return
+        }
+        
+        // Find the topmost view controller
+        var topController = rootViewController
+        while let presentedViewController = topController.presentedViewController {
+            topController = presentedViewController
+        }
+        
+        let activityViewController = UIActivityViewController(
+            activityItems: shareItems,
+            applicationActivities: nil
+        )
+        
+        // Enable all default Apple sharing activities
+        activityViewController.excludedActivityTypes = []
+        
+        // Configure sheet presentation to behave like iMessage share sheet
+        if let sheetController = activityViewController.sheetPresentationController {
+            sheetController.detents = [.medium(), .large()]
+            sheetController.selectedDetentIdentifier = .medium
+            sheetController.prefersGrabberVisible = false // No grab handle, drag anywhere
+            sheetController.prefersScrollingExpandsWhenScrolledToEdge = true // Allows dragging to expand
+            sheetController.prefersEdgeAttachedInCompactHeight = true
+            sheetController.largestUndimmedDetentIdentifier = .medium // Keep background dimmed when expanded
+        }
+        
+        topController.present(activityViewController, animated: true)
+    }
+    
 }
 
 // MARK: - Exportable View
@@ -234,19 +247,38 @@ struct SplitDetailExportView: View {
     }
 }
 
-// MARK: - ImageSaver Helper
-final class ImageSaver: NSObject {
-    private let completion: (_ success: Bool, _ error: Error?) -> Void
 
-    init(completion: @escaping (_ success: Bool, _ error: Error?) -> Void) {
-        self.completion = completion
-    }
 
-    func writeToPhotoAlbum(image: UIImage) {
-        UIImageWriteToSavedPhotosAlbum(image, self, #selector(saveCompleted), nil)
-    }
+extension SplitDetailView {
+    @MainActor
+    private func renderSplitAsImage() -> UIImage? {
+        let exportView = SplitDetailExportView(split: split)
+            .padding(16)
+            .frame(width: 900, alignment: .center)
+            .background(Color(.systemBackground))
+        
+        if #available(iOS 16.0, *) {
+            let renderer = ImageRenderer(content: exportView)
+            renderer.proposedSize = .init(width: 900, height: nil)
+            renderer.scale = UIScreen.main.scale
+            renderer.isOpaque = true
+            return renderer.uiImage
+        } else {
+            // Fallback for iOS < 16
+            let controller = UIHostingController(rootView: exportView)
+            let targetSize = CGSize(width: 900, height: UIView.layoutFittingCompressedSize.height)
+            controller.view.bounds = CGRect(origin: .zero, size: targetSize)
+            controller.view.backgroundColor = .systemBackground
+            let size = controller.sizeThatFits(in: CGSize(width: targetSize.width, height: CGFloat.greatestFiniteMagnitude))
+            controller.view.bounds.size = size
 
-    @objc private func saveCompleted(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
-        completion(error == nil, error)
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = UIScreen.main.scale
+            format.opaque = true
+            let renderer = UIGraphicsImageRenderer(size: size, format: format)
+            return renderer.image { _ in
+                controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
+            }
+        }
     }
 }
