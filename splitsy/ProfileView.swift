@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var showNewSplit = false
     @State private var showHistory = false
     @State private var showHistoryFullScreen = false
+    @State private var showSignOutAlert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -15,13 +17,15 @@ struct ProfileView: View {
                     .foregroundColor(.blue)
 
                 VStack(alignment: .leading) {
-                    Text("Brian")
+                    Text(authManager.currentUser?.name ?? "User")
                         .font(.title)
                         .bold()
-                    Text("View Account & Settings")
+                    Text(authManager.currentUser?.email ?? "")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
+                
+                Spacer()
             }
             .padding(.top)
 
@@ -41,8 +45,75 @@ struct ProfileView: View {
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
             }
-
+            
+            // Account settings
+            VStack(spacing: 12) {
+                Button(action: {
+                    // Handle account settings
+                }) {
+                    HStack {
+                        Image(systemName: "person.circle")
+                        Text("Account Settings")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                }
+                
+                Button(action: {
+                    // Handle notifications
+                }) {
+                    HStack {
+                        Image(systemName: "bell")
+                        Text("Notifications")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                }
+                
+                Button(action: {
+                    // Handle help & support
+                }) {
+                    HStack {
+                        Image(systemName: "questionmark.circle")
+                        Text("Help & Support")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                }
+            }
+            
             Spacer()
+            
+            // Sign out button
+            Button(action: {
+                showSignOutAlert = true
+            }) {
+                HStack {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                    Text("Sign Out")
+                    Spacer()
+                }
+                .font(.headline)
+                .foregroundColor(.red)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+            }
         }
         .padding(.horizontal)
         .fullScreenCover(isPresented: $showNewSplit) {
@@ -64,6 +135,14 @@ struct ProfileView: View {
                     }
             }
             .navigationViewStyle(StackNavigationViewStyle())
+        }
+        .alert("Sign Out", isPresented: $showSignOutAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Sign Out", role: .destructive) {
+                authManager.signOut()
+            }
+        } message: {
+            Text("Are you sure you want to sign out?")
         }
     }
 }

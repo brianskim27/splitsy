@@ -219,7 +219,7 @@ struct ItemAssignmentView: View {
             return
         }
 
-        users.append(User(id: UUID().uuidString, name: trimmedName, assignedItemIDs: []))
+        users.append(User(id: UUID().uuidString, email: "", name: trimmedName, createdAt: Date(), assignedItemIDs: []))
         newUserName = ""
         errorMessage = nil
     }

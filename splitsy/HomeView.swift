@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @EnvironmentObject var funFactsManager: FunFactsManager
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var showNewSplit = false
     @State private var showQuickSplit = false
     
@@ -21,7 +22,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     HStack {
-                        Text("Hi, Brian!")
+                        Text("Hi, \(authManager.currentUser?.name ?? "User")!")
                             .font(.largeTitle)
                             .bold()
                         
