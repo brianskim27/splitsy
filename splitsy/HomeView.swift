@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @EnvironmentObject var funFactsManager: FunFactsManager
     @State private var showNewSplit = false
     @State private var showQuickSplit = false
     
@@ -19,20 +20,10 @@ struct HomeView: View {
         ZStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("Hi, Brian!")
-                        .font(.largeTitle)
-                        .bold()
-                        .padding(.top)
-                    
                     HStack {
-                        HStack(spacing: 6) {
-                            Image(systemName: "chart.pie.fill")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Text("You've split with \(uniquePeopleThisMonth) people so far this month.")
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                        }
+                        Text("Hi, Brian!")
+                            .font(.largeTitle)
+                            .bold()
                         
                         Spacer()
                         
@@ -58,6 +49,16 @@ struct HomeView: View {
                             .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
                         }
                     }
+                    .padding(.top)
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "lightbulb.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.orange)
+                        Text(funFactsManager.currentFunFact.isEmpty ? "You've split with \(uniquePeopleThisMonth) people so far this month." : funFactsManager.currentFunFact)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
                     .padding(.bottom, 4)
                     
                     // Statistics Dashboard
@@ -76,6 +77,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showQuickSplit) {
             QuickSplitView()
+        }
+        .onAppear {
+            funFactsManager.generateFunFact(from: splitHistoryManager.pastSplits)
         }
     }
 }

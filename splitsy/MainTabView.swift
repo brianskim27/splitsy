@@ -7,6 +7,7 @@ enum Tab {
 
 struct MainTabView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @EnvironmentObject var funFactsManager: FunFactsManager
     @State private var selectedTab: Tab = .home
     @State private var showNewSplit = false
 
