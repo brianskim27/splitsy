@@ -9,10 +9,17 @@ struct ItemAssignmentView: View {
     @State private var errorMessage: String? = nil
     @State private var userShares: [String: Double] = [:]
     @State private var detailedBreakdown: [String: [ItemDetail]] = [:]
+    @State private var tipAmount: String = ""
+    @State private var isTipEnabled: Bool = false
+    @State private var editingUser: User? = nil
+    @State private var editingUserName: String = ""
+    @FocusState private var isTipFieldFocused: Bool
+    @State private var keyboardHeight: CGFloat = 0
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 18) {
+            ScrollView {
+                VStack(spacing: 18) {
                 // Add new user section
                 HStack(spacing: 12) {
                     TextField("Add person...", text: $newUserName)
@@ -72,7 +79,7 @@ struct ItemAssignmentView: View {
                                 }
                         .padding(.vertical, 4)
                             }
-                    .frame(maxHeight: 320)
+                    .frame(maxHeight: 280)
                 }
                 .background(Color(.systemBackground))
                 .cornerRadius(18)
@@ -104,15 +111,48 @@ struct ItemAssignmentView: View {
                                                 .fill(Color.blue.opacity(0.7))
                                                 .frame(width: 36, height: 36)
                                                 .overlay(Text(userInitials(user.name)).foregroundColor(.white).font(.headline))
-                                            Text(user.name)
-                                                .font(.body)
-                                                .bold()
-                                                .lineLimit(1)
-                                                .truncationMode(.tail)
+                                            
+                                            if editingUser?.id == user.id {
+                                                TextField("Name", text: $editingUserName)
+                                                    .font(.body)
+                                                    .bold()
+                                                    .textFieldStyle(PlainTextFieldStyle())
+                                                    .onSubmit {
+                                                        saveUserName()
+                                                    }
+                                            } else {
+                                                Text(user.name)
+                                                    .font(.body)
+                                                    .bold()
+                                                    .lineLimit(1)
+                                                    .truncationMode(.tail)
+                                                    .onTapGesture {
+                                                        startEditingUser(user)
+                                                    }
+                                            }
+                                            
                                             Spacer()
-                                            Button(action: { removeUser(user) }) {
-                                                Image(systemName: "trash")
-                                                    .foregroundColor(.red)
+                                            
+                                            HStack(spacing: 8) {
+                                                if editingUser?.id == user.id {
+                                                    Button(action: saveUserName) {
+                                                        Image(systemName: "checkmark")
+                                                            .foregroundColor(.green)
+                                                    }
+                                                    Button(action: cancelEditing) {
+                                                        Image(systemName: "xmark")
+                                                            .foregroundColor(.red)
+                                                    }
+                                                } else {
+                                                    Button(action: { startEditingUser(user) }) {
+                                                        Image(systemName: "pencil")
+                                                            .foregroundColor(.blue)
+                                                    }
+                                                    Button(action: { removeUser(user) }) {
+                                                        Image(systemName: "trash")
+                                                            .foregroundColor(.red)
+                                                    }
+                                                }
                                             }
                                         }
                                         if !user.assignedItemIDs.isEmpty {
@@ -144,7 +184,7 @@ struct ItemAssignmentView: View {
                                     .cornerRadius(12)
                                     .contentShape(Rectangle())
                                     .onTapGesture {
-                                        if !selectedItems.isEmpty {
+                                        if !selectedItems.isEmpty && editingUser?.id != user.id {
                                             assignSelectedItems(to: user)
                                         }
                                     }
@@ -152,7 +192,7 @@ struct ItemAssignmentView: View {
                     }
                             .padding(.vertical, 4)
                         }
-                        .frame(maxHeight: 320)
+                        .frame(maxHeight: 280)
                     }
                 }
                 .background(Color(.systemBackground))
@@ -160,6 +200,65 @@ struct ItemAssignmentView: View {
                 .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
                 .padding(.horizontal, 4)
                 .frame(maxWidth: .infinity, minHeight: 120)
+
+                // Tip Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Tip")
+                            .font(.headline)
+                            .bold()
+                        Spacer()
+                        Toggle("", isOn: $isTipEnabled)
+                            .labelsHidden()
+                    }
+                    .padding(.horizontal, 8)
+                    
+                    if isTipEnabled {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text("$")
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.secondary)
+                                
+                                TextField("0.00", text: $tipAmount)
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .keyboardType(.decimalPad)
+                                    .textFieldStyle(PlainTextFieldStyle())
+                                    .focused($isTipFieldFocused)
+                                
+                                if isTipFieldFocused {
+                                    Button("Done") {
+                                        isTipFieldFocused = false
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                            
+                            HStack {
+                                Text("Tip Percentage:")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text("\(String(format: "%.1f", tipPercentage))%")
+                                    .font(.subheadline)
+                                    .bold()
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 8)
+                    }
+                }
+                .background(Color(.systemBackground))
+                .cornerRadius(18)
+                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                .padding(.horizontal, 4)
 
                 Spacer()
 
@@ -189,9 +288,21 @@ struct ItemAssignmentView: View {
                 .disabled(!isNextButtonEnabled)
                 .opacity(isNextButtonEnabled ? 1.0 : 0.5)
             }
-            .padding(.top, 12)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
+                        .padding(.top, 12)
+            .padding(.bottom, 20)
+            .padding(.bottom, keyboardHeight)
+                }
+        .navigationBarTitleDisplayMode(.inline)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .navigationBarBackButtonHidden(true)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
+            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                keyboardHeight = keyboardFrame.height
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardHeight = 0
+        }
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Assign")
@@ -202,9 +313,70 @@ struct ItemAssignmentView: View {
         }
     }
     
+    private var subtotal: Double {
+        items.reduce(0) { $0 + $1.cost }
+    }
+    
+    private var assignedSubtotal: Double {
+        var total = 0.0
+        for user in users {
+            for itemID in user.assignedItemIDs {
+                if let item = items.first(where: { $0.id == itemID }) {
+                    let costPerUser = item.cost / Double(item.assignedUsers.count)
+                    total += costPerUser
+                }
+            }
+        }
+        return total
+    }
+    
+    private var tipAmountDouble: Double {
+        guard let amount = Double(tipAmount) else { return 0 }
+        return amount
+    }
+    
+    private var tipPercentage: Double {
+        guard assignedSubtotal > 0 else { return 0 }
+        return (tipAmountDouble / assignedSubtotal) * 100
+    }
+    
     private var isNextButtonEnabled: Bool {
         // Cache the result to avoid repeated computation
         return !users.isEmpty && users.contains { !$0.assignedItemIDs.isEmpty }
+    }
+    
+    // User editing functions
+    private func startEditingUser(_ user: User) {
+        editingUser = user
+        editingUserName = user.name
+    }
+    
+    private func saveUserName() {
+        let trimmedName = editingUserName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            cancelEditing()
+            return
+        }
+        
+        if let userIndex = users.firstIndex(where: { $0.id == editingUser?.id }) {
+            // Update user name
+            users[userIndex].name = trimmedName
+            
+            // Update assigned users in items
+            for itemIndex in items.indices {
+                if let userIndexInItem = items[itemIndex].assignedUsers.firstIndex(of: editingUser?.name ?? "") {
+                    items[itemIndex].assignedUsers[userIndexInItem] = trimmedName
+                }
+            }
+        }
+        
+        editingUser = nil
+        editingUserName = ""
+    }
+    
+    private func cancelEditing() {
+        editingUser = nil
+        editingUserName = ""
     }
     
     // Add user
@@ -305,6 +477,13 @@ struct ItemAssignmentView: View {
                     userItems.append(ItemDetail(item: item.name, cost: costPerUser))
                     }
                 }
+            
+            // Add tip portion if tip is enabled
+            if isTipEnabled && tipAmountDouble > 0 {
+                let userTipShare = userTotal * (tipAmountDouble / assignedSubtotal)
+                userTotal += userTipShare
+                userItems.append(ItemDetail(item: "Tip (\(String(format: "%.1f", tipPercentage))%)", cost: userTipShare))
+            }
             
             if userTotal > 0 {
                 shares[user.name] = userTotal
