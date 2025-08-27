@@ -4,7 +4,6 @@ struct ItemAssignmentView: View {
     @Binding var items: [ReceiptItem] // Items to assign
     @Binding var users: [User] // Users and their assignments
     var onComplete: (([String: Double], [String: [ItemDetail]]) -> Void)? = nil
-    @State private var selectedItems: [ReceiptItem] = []
     @State private var newUserName: String = ""
     @State private var errorMessage: String? = nil
     @State private var userShares: [String: Double] = [:]
@@ -14,287 +13,289 @@ struct ItemAssignmentView: View {
     @State private var editingUser: User? = nil
     @State private var editingUserName: String = ""
     @FocusState private var isTipFieldFocused: Bool
+    @FocusState private var isEditingNameFocused: Bool
     @State private var keyboardHeight: CGFloat = 0
 
-    var body: some View {
+        var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 18) {
-                // Add new user section
-                HStack(spacing: 12) {
-                    TextField("Add person...", text: $newUserName)
-                        .padding(12)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                        .font(.body)
-                        .autocapitalization(.words)
-                    Button(action: { addUser() }) {
-                        Image(systemName: "plus")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding(10)
-                            .background(Color.blue)
-                            .clipShape(Circle())
-                    }
-                }
-                .padding(.horizontal)
-
-                // Error Message
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .bold()
-                        .padding(.bottom, 5)
-                }
-
-                // Items Section
-                VStack(alignment: .leading, spacing: 0) {
-                                Text("Items")
-                                    .font(.headline)
-                                    .bold()
-                        .padding(.leading, 8)
-                        .padding(.top, 8)
-                    ScrollView {
-                        VStack(spacing: 10) {
-                                    ForEach(items, id: \.id) { item in
-                                        let isSelected = selectedItems.contains(where: { $0.id == item.id })
-                                Button(action: { toggleSelection(for: item) }) {
-                                    HStack {
-                                        Text(item.name)
-                                            .font(.body)
-                                            .bold()
-                                            .foregroundColor(.primary)
-                                        Spacer()
-                                        Text("$\(item.cost, specifier: "%.2f")")
-                                            .foregroundColor(.green)
-                                            .font(.subheadline)
-                                            .bold()
-                                    }
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal)
-                                    .background(isSelected ? Color.blue.opacity(0.15) : Color(.systemGray6))
-                                    .cornerRadius(12)
-                                }
-                                    }
-                                }
-                        .padding(.vertical, 4)
+                VStack(alignment: .leading, spacing: 24) {
+                    // Add new user section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Add Person")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        HStack(spacing: 12) {
+                            TextField("Person name", text: $newUserName)
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                                .font(.body)
+                                .autocapitalization(.words)
+                            
+                            Button(action: { addUser() }) {
+                                Text("Add")
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
                             }
-                    .frame(maxHeight: 280)
-                }
-                .background(Color(.systemBackground))
-                .cornerRadius(18)
-                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-                .padding(.horizontal, 4)
-                .frame(maxWidth: .infinity)
+                        }
+                        
+                        // Error Message
+                        if let errorMessage = errorMessage {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .font(.subheadline)
+                        }
+                    }
 
-                // People Section
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("People")
-                                    .font(.headline)
-                                    .bold()
-                        .padding(.leading, 8)
-                        .padding(.top, 8)
-                    if users.isEmpty {
-                        Text("No people added yet")
-                            .foregroundColor(.gray)
-                            .font(.subheadline)
-                            .padding(.vertical, 32)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                    } else {
-                        ScrollView {
-                            VStack(spacing: 10) {
-                                    ForEach(users.indices, id: \.self) { index in
+                    // People Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("People")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        if users.isEmpty {
+                            Text("No people added yet")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                        } else {
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 12) {
+                                ForEach(users.indices, id: \.self) { index in
                                     let user = users[index]
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        HStack(spacing: 12) {
-                                            Circle()
-                                                .fill(Color.blue.opacity(0.7))
-                                                .frame(width: 36, height: 36)
-                                                .overlay(Text(userInitials(user.name)).foregroundColor(.white).font(.headline))
-                                            
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
                                             if editingUser?.id == user.id {
                                                 TextField("Name", text: $editingUserName)
-                                                    .font(.body)
-                                                    .bold()
+                                                    .font(.subheadline)
+                                                    .fontWeight(.semibold)
                                                     .textFieldStyle(PlainTextFieldStyle())
+                                                    .focused($isEditingNameFocused)
                                                     .onSubmit {
                                                         saveUserName()
                                                     }
                                             } else {
                                                 Text(user.name)
-                                                    .font(.body)
-                                                    .bold()
-                                                    .lineLimit(1)
-                                                    .truncationMode(.tail)
-                                                    .onTapGesture {
-                                                        startEditingUser(user)
-                                                    }
+                                                    .font(.subheadline)
+                                                    .fontWeight(.semibold)
+                                                    .foregroundColor(.primary)
                                             }
                                             
                                             Spacer()
                                             
-                                            HStack(spacing: 8) {
+                                            HStack(spacing: 4) {
                                                 if editingUser?.id == user.id {
                                                     Button(action: saveUserName) {
                                                         Image(systemName: "checkmark")
+                                                            .font(.caption)
                                                             .foregroundColor(.green)
                                                     }
                                                     Button(action: cancelEditing) {
                                                         Image(systemName: "xmark")
+                                                            .font(.caption)
                                                             .foregroundColor(.red)
                                                     }
                                                 } else {
                                                     Button(action: { startEditingUser(user) }) {
                                                         Image(systemName: "pencil")
+                                                            .font(.caption)
                                                             .foregroundColor(.blue)
                                                     }
                                                     Button(action: { removeUser(user) }) {
                                                         Image(systemName: "trash")
+                                                            .font(.caption)
                                                             .foregroundColor(.red)
                                                     }
                                                 }
                                             }
                                         }
-                                        if !user.assignedItemIDs.isEmpty {
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 6) {
-                                                    ForEach(user.assignedItemIDs, id: \.self) { itemId in
-                                                        if let item = items.first(where: { $0.id == itemId }) {
-                                                            Text(item.name)
-                                                                .font(.caption)
-                                                                .padding(.horizontal, 8)
-                                                                .padding(.vertical, 4)
-                                                                .background(Color.blue.opacity(0.15))
-                                                                .foregroundColor(.blue)
-                                                                .cornerRadius(8)
-                                                                .onTapGesture {
-                                                                    unassignItem(item, from: user)
-                                                                }
-                                                        }
+                                        
+                                        if let assignedItems = assignedItemsPerPerson[index], !assignedItems.isEmpty {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                ForEach(assignedItems, id: \.id) { item in
+                                                    HStack {
+                                                        Text(item.name)
+                                                            .font(.caption)
+                                                            .foregroundColor(.secondary)
+                                                        Spacer()
+                                                        Text("$\(item.cost / Double(item.assignedUsers.count), specifier: "%.2f")")
+                                                            .font(.caption)
+                                                            .foregroundColor(.green)
                                                     }
                                                 }
-                                                .frame(height: 28)
-                            }
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                                    }
-                                    .padding(.vertical, 8)
-                        .padding(.horizontal)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(12)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        if !selectedItems.isEmpty && editingUser?.id != user.id {
-                                            assignSelectedItems(to: user)
+                                            }
+                                        } else {
+                                            Text("No items assigned")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .italic()
                                         }
                                     }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 10)
+                                    .background(Color(.systemBackground))
+                                    .cornerRadius(10)
+                                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
                                 }
-                    }
-                            .padding(.vertical, 4)
+                            }
                         }
-                        .frame(maxHeight: 280)
                     }
-                }
-                .background(Color(.systemBackground))
-                .cornerRadius(18)
-                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-                .padding(.horizontal, 4)
-                .frame(maxWidth: .infinity, minHeight: 120)
 
-                // Tip Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Tip")
+                    // Items Section  
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Items")
                             .font(.headline)
-                            .bold()
-                        Spacer()
-                        Toggle("", isOn: $isTipEnabled)
-                            .labelsHidden()
+                            .foregroundColor(.primary)
+                        
+                        if items.isEmpty {
+                            Text("No items to assign")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                        } else {
+                            ForEach(items) { item in
+                                ItemAssignmentRow(
+                                    item: item,
+                                    users: $users,
+                                    items: $items,
+                                    onAssignmentChange: { }
+                                )
+                            }
+                        }
                     }
-                    .padding(.horizontal, 8)
-                    
-                    if isTipEnabled {
-                        VStack(spacing: 8) {
-                            HStack {
-                                Text("$")
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.secondary)
-                                
-                                TextField("0.00", text: $tipAmount)
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                    .keyboardType(.decimalPad)
-                                    .textFieldStyle(PlainTextFieldStyle())
-                                    .focused($isTipFieldFocused)
-                                
-                                if isTipFieldFocused {
-                                    Button("Done") {
-                                        isTipFieldFocused = false
+
+                    // Tip Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Toggle("Add Tip", isOn: $isTipEnabled)
+                            .font(.headline)
+                        
+                        if isTipEnabled {
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Tip amount input
+                                HStack {
+                                    Text("$")
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                    
+                                    TextField("0.00", text: $tipAmount)
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+                                        .keyboardType(.decimalPad)
+                                        .textFieldStyle(PlainTextFieldStyle())
+                                        .focused($isTipFieldFocused)
+                                    
+                                    if isTipFieldFocused {
+                                        Button("Done") {
+                                            isTipFieldFocused = false
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundColor(.blue)
                                     }
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
+                                }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                                
+                                HStack {
+                                    Text("Tip Percentage:")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text("\(String(format: "%.1f", tipPercentage))%")
+                                        .font(.subheadline)
+                                        .bold()
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+
+                    // Total Summary
+                    if !items.isEmpty && !users.isEmpty {
+                        VStack(spacing: 12) {
+                            Divider()
+                            
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Text("Assigned Subtotal:")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text("$\(assignedSubtotal, specifier: "%.2f")")
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                }
+                                
+                                if isTipEnabled && tipAmountDouble > 0 {
+                                    HStack {
+                                        Text("Tip:")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text("$\(tipAmountDouble, specifier: "%.2f")")
+                                            .font(.subheadline)
+                                            .foregroundColor(.primary)
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                HStack {
+                                    Text("Total:")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text("$\(assignedSubtotal + tipAmountDouble, specifier: "%.2f")")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.green)
                                 }
                             }
                             .padding()
                             .background(Color(.systemGray6))
                             .cornerRadius(12)
-                            
-                            HStack {
-                                Text("Tip Percentage:")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text("\(String(format: "%.1f", tipPercentage))%")
-                                    .font(.subheadline)
-                                    .bold()
-                                    .foregroundColor(.blue)
-                            }
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 8)
                     }
+
+                    Spacer(minLength: 20)
                 }
-                .background(Color(.systemBackground))
-                .cornerRadius(18)
-                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-                .padding(.horizontal, 4)
-
-                Spacer()
-
-                // Next Button
-                Button(action: {
+                .padding()
+            }
+            .padding(.bottom, keyboardHeight)
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Assign")
+                    .font(.title2)
+                    .bold()
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Next") {
                     let (shares, breakdown) = calculateUserShares()
                     userShares = shares
                     detailedBreakdown = breakdown
                     onComplete?(shares, breakdown)
-                }) {
-                    HStack {
-                        Spacer()
-                        Text("Next")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.white)
-                        Spacer()
-                    }
-                    .padding()
-                    .background(isNextButtonEnabled ? Color.blue : Color.gray)
-                    .cornerRadius(14)
-                    .shadow(color: isNextButtonEnabled ? Color.blue.opacity(0.18) : .clear, radius: 8, x: 0, y: 2)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
                 .disabled(!isNextButtonEnabled)
-                .opacity(isNextButtonEnabled ? 1.0 : 0.5)
+                .opacity(isNextButtonEnabled ? 1 : 0.6)
             }
-                        .padding(.top, 12)
-            .padding(.bottom, 20)
-            .padding(.bottom, keyboardHeight)
-                }
-        .navigationBarTitleDisplayMode(.inline)
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        .navigationBarBackButtonHidden(true)
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
             if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
                 keyboardHeight = keyboardFrame.height
@@ -303,18 +304,30 @@ struct ItemAssignmentView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardHeight = 0
         }
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Assign")
-                        .font(.title2)
-                        .bold()
-                }
-            }
-        }
     }
     
     private var subtotal: Double {
         items.reduce(0) { $0 + $1.cost }
+    }
+    
+    private var assignedItemsPerPerson: [Int: [ReceiptItem]] {
+        var assignments: [Int: [ReceiptItem]] = [:]
+        
+        // Initialize all people with empty arrays
+        for i in 0..<users.count {
+            assignments[i] = []
+        }
+        
+        // Add assigned items
+        for (index, user) in users.enumerated() {
+            for itemID in user.assignedItemIDs {
+                if let item = items.first(where: { $0.id == itemID }) {
+                    assignments[index]?.append(item)
+                }
+            }
+        }
+        
+        return assignments
     }
     
     private var assignedSubtotal: Double {
@@ -349,6 +362,7 @@ struct ItemAssignmentView: View {
     private func startEditingUser(_ user: User) {
         editingUser = user
         editingUserName = user.name
+        isEditingNameFocused = true
     }
     
     private func saveUserName() {
@@ -372,11 +386,13 @@ struct ItemAssignmentView: View {
         
         editingUser = nil
         editingUserName = ""
+        isEditingNameFocused = false
     }
     
     private func cancelEditing() {
         editingUser = nil
         editingUserName = ""
+        isEditingNameFocused = false
     }
     
     // Add user
@@ -400,64 +416,16 @@ struct ItemAssignmentView: View {
     private func removeUser(_ user: User) {
         // First, unassign all items from this user
         for itemID in user.assignedItemIDs {
-            if let item = items.first(where: { $0.id == itemID }) {
-                unassignItem(item, from: user)
+            if let itemIndex = items.firstIndex(where: { $0.id == itemID }) {
+                if let userIndexInItem = items[itemIndex].assignedUsers.firstIndex(of: user.name) {
+                    items[itemIndex].assignedUsers.remove(at: userIndexInItem)
+                }
             }
         }
         
         // Then remove the user from the users array
         if let userIndex = users.firstIndex(where: { $0.id == user.id }) {
             users.remove(at: userIndex)
-        }
-    }
-
-    // Select/Deselect Items
-    private func toggleSelection(for item: ReceiptItem) {
-        if let index = selectedItems.firstIndex(where: { $0.id == item.id }) {
-            selectedItems.remove(at: index)
-        } else {
-            selectedItems.append(item)
-        }
-    }
-
-    private func toggleSelectAll() {
-        selectedItems = selectedItems.count == items.count ? [] : items
-    }
-
-    // Assign Selected Items to a User
-    private func assignSelectedItems(to user: User) {
-        guard !selectedItems.isEmpty else {
-            return
-        }
-
-        if let userIndex = users.firstIndex(where: { $0.id == user.id }) {
-            for item in selectedItems {
-                if let itemIndex = items.firstIndex(where: { $0.id == item.id }) {
-                    if !items[itemIndex].assignedUsers.contains(user.name) {
-                        items[itemIndex].assignedUsers.append(user.name)
-                    }
-
-                    if !users[userIndex].assignedItemIDs.contains(item.id) {
-                        users[userIndex].assignedItemIDs.append(item.id)
-                    }
-                }
-            }
-            errorMessage = nil
-        }
-    }
-
-    // Unassign an Item from a User
-    private func unassignItem(_ item: ReceiptItem, from user: User) {
-        if let userIndex = users.firstIndex(where: { $0.id == user.id }) {
-            if let itemIDIndex = users[userIndex].assignedItemIDs.firstIndex(of: item.id) {
-                users[userIndex].assignedItemIDs.remove(at: itemIDIndex)
-            }
-
-            if let itemIndex = items.firstIndex(where: { $0.id == item.id }) {
-                if let userIndexInItem = items[itemIndex].assignedUsers.firstIndex(of: user.name) {
-                    items[itemIndex].assignedUsers.remove(at: userIndexInItem)
-                }
-            }
         }
     }
 
@@ -504,5 +472,124 @@ struct ItemAssignmentView: View {
         } else {
             return "?"
         }
+    }
+}
+
+// MARK: - ItemAssignmentRow
+struct ItemAssignmentRow: View {
+    let item: ReceiptItem
+    @Binding var users: [User]
+    @Binding var items: [ReceiptItem]
+    let onAssignmentChange: () -> Void
+    @State private var showAssignments = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text("$\(item.cost, specifier: "%.2f")")
+                        .font(.subheadline)
+                        .foregroundColor(.green)
+                }
+                
+                Spacer()
+                
+                Button("Assign") {
+                    showAssignments.toggle()
+                }
+                .font(.subheadline)
+                .foregroundColor(.blue)
+            }
+            
+            if showAssignments {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Assign to:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 8) {
+                        ForEach(users.indices, id: \.self) { index in
+                            let user = users[index]
+                            let isAssigned = item.assignedUsers.contains(user.name)
+                            
+                            Button(action: {
+                                toggleAssignment(for: user)
+                            }) {
+                                HStack {
+                                    Image(systemName: isAssigned ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(isAssigned ? .blue : .gray)
+                                    
+                                    Text(user.name)
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(
+                                    isAssigned 
+                                    ? Color.blue.opacity(0.1) 
+                                    : Color(.systemGray6)
+                                )
+                                .cornerRadius(6)
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
+            
+            // Show assigned people
+            if !item.assignedUsers.isEmpty {
+                HStack {
+                    Text("Assigned to:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Text(item.assignedUsers.joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                    
+                    Spacer()
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+    
+    private func toggleAssignment(for user: User) {
+        // Find the item in the items array
+        guard let itemIndex = items.firstIndex(where: { $0.id == item.id }),
+              let userIndex = users.firstIndex(where: { $0.id == user.id }) else { return }
+        
+        let isCurrentlyAssigned = items[itemIndex].assignedUsers.contains(user.name)
+        
+        if isCurrentlyAssigned {
+            // Remove assignment
+            if let assignedUserIndex = items[itemIndex].assignedUsers.firstIndex(of: user.name) {
+                items[itemIndex].assignedUsers.remove(at: assignedUserIndex)
+            }
+            if let assignedItemIndex = users[userIndex].assignedItemIDs.firstIndex(of: item.id) {
+                users[userIndex].assignedItemIDs.remove(at: assignedItemIndex)
+            }
+        } else {
+            // Add assignment
+            items[itemIndex].assignedUsers.append(user.name)
+            users[userIndex].assignedItemIDs.append(item.id)
+        }
+        
+        onAssignmentChange()
     }
 }
