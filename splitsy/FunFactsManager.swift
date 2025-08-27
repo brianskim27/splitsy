@@ -205,19 +205,27 @@ class FunFactsManager: ObservableObject {
     private func formatFunFact(_ fact: FunFact, with splits: [Split]) -> String {
         switch fact.id {
         case "total_splits":
-            return fact.template.replacingOccurrences(of: "{count}", with: "\(splits.count)")
+            let count = splits.count
+            let timeText = count == 1 ? "time" : "times"
+            return fact.template
+                .replacingOccurrences(of: "{count} times", with: "\(count) \(timeText)")
+                .replacingOccurrences(of: "{count}", with: "\(count)")
         case "money_saved":
             let saved = calculateMoneySaved(from: splits)
             return fact.template.replacingOccurrences(of: "{amount:.0f}", with: String(format: "%.0f", saved))
         case "unique_people":
             let uniqueCount = getUniquePeopleCount(from: splits)
-            return fact.template.replacingOccurrences(of: "{count}", with: "\(uniqueCount)")
+            let peopleText = uniqueCount == 1 ? "person" : "people"
+            return fact.template
+                .replacingOccurrences(of: "{count} people", with: "\(uniqueCount) \(peopleText)")
+                .replacingOccurrences(of: "{count}", with: "\(uniqueCount)")
         case "favorite_partner":
             if let partner = getMostFrequentPartner(from: splits) {
                 let frequency = getPartnerFrequency(partner: partner, from: splits)
+                let timeText = frequency == 1 ? "time" : "times"
                 return fact.template
                     .replacingOccurrences(of: "{name}", with: partner)
-                    .replacingOccurrences(of: "{frequency}", with: "\(frequency)")
+                    .replacingOccurrences(of: "{frequency} times", with: "\(frequency) \(timeText)")
             }
             return "You have great split partners!"
         case "average_split":
@@ -228,7 +236,8 @@ class FunFactsManager: ObservableObject {
             return fact.template.replacingOccurrences(of: "{amount:.0f}", with: String(format: "%.0f", biggest))
         case "split_streak":
             let streak = getSplitStreak(from: splits)
-            return fact.template.replacingOccurrences(of: "{days}", with: "\(streak)")
+            let dayText = streak == 1 ? "day" : "days"
+            return fact.template.replacingOccurrences(of: "{days} days", with: "\(streak) \(dayText)")
         case "weekend_warrior":
             let percentage = getWeekendPercentage(from: splits)
             return fact.template.replacingOccurrences(of: "{percentage}", with: "\(percentage)")
@@ -245,7 +254,8 @@ class FunFactsManager: ObservableObject {
             return fact.template.replacingOccurrences(of: "{percentage}", with: "\(percentage)")
         case "split_frequency":
             let days = getAverageDaysBetweenSplits(from: splits)
-            return fact.template.replacingOccurrences(of: "{days}", with: "\(days)")
+            let dayText = days == 1 ? "day" : "days"
+            return fact.template.replacingOccurrences(of: "{days} days", with: "\(days) \(dayText)")
         case "monthly_spending":
             let monthly = getAverageMonthlySpending(from: splits)
             return fact.template.replacingOccurrences(of: "{amount:.0f}", with: String(format: "%.0f", monthly))
@@ -265,10 +275,14 @@ class FunFactsManager: ObservableObject {
             return fact.template.replacingOccurrences(of: "{percentage}", with: "\(percentage)")
         case "relationship_builder":
             let count = getUniquePeopleCount(from: splits)
-            return fact.template.replacingOccurrences(of: "{count}", with: "\(count)")
+            let relationshipText = count == 1 ? "relationship" : "relationships"
+            return fact.template
+                .replacingOccurrences(of: "{count} relationships", with: "\(count) \(relationshipText)")
+                .replacingOccurrences(of: "{count}", with: "\(count)")
         case "time_investment":
             let hours = estimateTimeSpent(from: splits)
-            return fact.template.replacingOccurrences(of: "{hours}", with: "\(hours)")
+            let hourText = hours == 1 ? "hour" : "hours"
+            return fact.template.replacingOccurrences(of: "{hours} hours", with: "\(hours) \(hourText)")
         default:
             return fact.template
         }
