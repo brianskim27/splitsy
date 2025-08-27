@@ -673,7 +673,7 @@ struct QuickSplitReviewView: View {
             }
             .padding()
         }
-        .navigationTitle("Split Review")
+        .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {

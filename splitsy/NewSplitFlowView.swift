@@ -1,4 +1,5 @@
 import SwiftUI
+import LinkPresentation
 
 struct NewSplitFlowView: View {
     @Environment(\.dismiss) var dismiss
@@ -16,6 +17,7 @@ struct NewSplitFlowView: View {
     @State private var userShares: [String: Double] = [:]
     @State private var detailedBreakdown: [String: [ItemDetail]] = [:]
     @State private var users: [User] = []
+    @State private var splitName: String = ""
 
     var body: some View {
         NavigationStack {
@@ -56,9 +58,10 @@ struct NewSplitFlowView: View {
                             userShares: userShares,
                             detailedBreakdown: detailedBreakdown,
                             onBack: { step -= 1 },
-                            onNext: { splitName in
+                            onNext: { name in
+                                splitName = name
                                 let newSplit = Split(
-                                    description: splitName.isEmpty ? nil : splitName,
+                                    description: name.isEmpty ? nil : name,
                                     totalAmount: userShares.values.reduce(0, +),
                                     userShares: userShares,
                                     detailedBreakdown: detailedBreakdown,
@@ -69,7 +72,13 @@ struct NewSplitFlowView: View {
                             }
                         )
                     case 5:
-                        CompletionStep(onDone: { dismiss() })
+                        CompletionStep(
+                            splitName: splitName,
+                            userShares: userShares,
+                            detailedBreakdown: detailedBreakdown,
+                            receiptImage: receiptImage,
+                            onDone: { dismiss() }
+                        )
                     default:
                         EmptyView()
                     }
@@ -212,46 +221,256 @@ struct ReviewSplitStep: View {
 
 // Completion
 struct CompletionStep: View {
+    let splitName: String
+    let userShares: [String: Double]
+    let detailedBreakdown: [String: [ItemDetail]]
+    let receiptImage: UIImage?
     var onDone: () -> Void
-    @State private var animate = false
+    @State private var isPreparingShare = false
+    
+    private var total: Double {
+        userShares.values.reduce(0, +)
+    }
+    
+    private func userInitials(_ name: String) -> String {
+        let parts = name.split(separator: " ")
+        if parts.count == 1, let first = parts.first?.first {
+            return String(first).uppercased()
+        } else if let first = parts.first?.first, let last = parts.last?.first {
+            return String(first).uppercased() + String(last).uppercased()
+        } else {
+            return "?"
+        }
+    }
+    
     var body: some View {
-        ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [Color.white, Color.blue.opacity(0.03)]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            VStack(spacing: 36) {
-                Spacer()
-                Image(systemName: "checkmark.circle.fill")
-                    .resizable()
-                    .frame(width: 110, height: 110)
-                    .foregroundColor(.green)
-                    .shadow(color: .green.opacity(0.18), radius: 16, x: 0, y: 4)
-                    .scaleEffect(animate ? 1.1 : 1.0)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.5), value: animate)
-                Text("Split Complete!")
-                    .font(.largeTitle)
-                    .bold()
-                Spacer()
-                Button(action: onDone) {
-                    HStack {
-                        Spacer()
-                        Text("Done")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Spacer()
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    // Header Info
+                    VStack(spacing: 8) {
+                        Text(splitName.isEmpty ? "Split" : splitName)
+                            .font(.title2)
+                            .bold()
+                        Text(Date(), style: .date)
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                        Text("Total: $\(total, specifier: "%.2f")")
+                            .font(.title2)
+                            .bold()
+                            .foregroundColor(.green)
                     }
-                    .padding()
-                    .background(Color.blue)
-                    .cornerRadius(14)
-                    .shadow(color: Color.blue.opacity(0.18), radius: 8, x: 0, y: 2)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 16)
+
+                    // User Breakdowns
+                    ForEach(userShares.keys.sorted(), id: \.self) { user in
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Circle()
+                                    .fill(Color.blue.opacity(0.7))
+                                    .frame(width: 32, height: 32)
+                                    .overlay(Text(userInitials(user)).foregroundColor(.white).font(.headline))
+                                Text(user)
+                                    .font(.headline)
+                                    .bold()
+                                Spacer()
+                                Text("$\(userShares[user] ?? 0, specifier: "%.2f")")
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                            }
+
+                            if let personItems = detailedBreakdown[user] {
+                                ForEach(personItems, id: \.self) { itemDetail in
+                                    HStack {
+                                        Text(itemDetail.item)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text("$\(itemDetail.cost, specifier: "%.2f")")
+                                            .font(.subheadline)
+                                            .foregroundColor(.green)
+                                    }
+                                    .padding(.leading, 44)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(12)
+                    }
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 24)
+                .padding()
             }
         }
-        .ignoresSafeArea()
-        .onAppear { animate = true }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                Button {
+                    Task {
+                        await prepareAndPresentShareSheet()
+                    }
+                } label: {
+                    if isPreparingShare {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+                .disabled(isPreparingShare)
+                
+                Button("Done") { onDone() }
+            }
+        }
+    }
+    
+    @MainActor
+    private func prepareAndPresentShareSheet() async {
+        isPreparingShare = true
+        
+        guard let splitImage = renderSplitAsImage() else {
+            isPreparingShare = false
+            return
+        }
+        
+        // Get the current view controller
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootViewController = window.rootViewController else {
+            isPreparingShare = false
+            return
+        }
+        
+        // Find the topmost view controller
+        var topController = rootViewController
+        while let presentedViewController = topController.presentedViewController {
+            topController = presentedViewController
+        }
+        
+        // Create custom share sheet with large image preview
+        let customShareController = CustomShareViewController(image: splitImage)
+        
+        isPreparingShare = false
+        topController.present(customShareController, animated: true)
+    }
+    
+    @MainActor
+    private func renderSplitAsImage() -> UIImage? {
+        let exportView = SplitExportView(
+            splitName: splitName,
+            userShares: userShares,
+            detailedBreakdown: detailedBreakdown,
+            total: total
+        )
+        .padding(16)
+        .frame(width: 900, alignment: .center)
+        .background(Color(.systemBackground))
+        
+        if #available(iOS 16.0, *) {
+            let renderer = ImageRenderer(content: exportView)
+            renderer.proposedSize = .init(width: 900, height: nil)
+            renderer.scale = UIScreen.main.scale
+            renderer.isOpaque = true
+            return renderer.uiImage
+        } else {
+            let controller = UIHostingController(rootView: exportView)
+            let targetSize = CGSize(width: 900, height: UIView.layoutFittingCompressedSize.height)
+            controller.view.bounds = CGRect(origin: .zero, size: targetSize)
+            controller.view.backgroundColor = .systemBackground
+            let size = controller.sizeThatFits(in: CGSize(width: targetSize.width, height: CGFloat.greatestFiniteMagnitude))
+            controller.view.bounds.size = size
+
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = UIScreen.main.scale
+            format.opaque = true
+            let renderer = UIGraphicsImageRenderer(size: size, format: format)
+            return renderer.image { _ in
+                controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
+            }
+        }
     }
 }
+
+// MARK: - Split Export View
+struct SplitExportView: View {
+    let splitName: String
+    let userShares: [String: Double]
+    let detailedBreakdown: [String: [ItemDetail]]
+    let total: Double
+    
+    private func userInitials(_ name: String) -> String {
+        let parts = name.split(separator: " ")
+        if parts.count == 1, let first = parts.first?.first {
+            return String(first).uppercased()
+        } else if let first = parts.first?.first, let last = parts.last?.first {
+            return String(first).uppercased() + String(last).uppercased()
+        } else {
+            return "?"
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(spacing: 6) {
+                Text(splitName.isEmpty ? "Split" : splitName)
+                    .font(.title2)
+                    .bold()
+                Text(Date(), style: .date)
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+                Text("Total: $\(total, specifier: "%.2f")")
+                    .font(.title2)
+                    .bold()
+                    .foregroundColor(.green)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 8)
+
+            VStack(spacing: 16) {
+                ForEach(userShares.keys.sorted(), id: \.self) { user in
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Circle()
+                                .fill(Color.blue.opacity(0.7))
+                                .frame(width: 24, height: 24)
+                                .overlay(Text(userInitials(user)).foregroundColor(.white).font(.caption).bold())
+                            Text(user)
+                                .font(.headline)
+                                .bold()
+                            Spacer()
+                            Text("$\(userShares[user] ?? 0, specifier: "%.2f")")
+                                .font(.headline)
+                                .foregroundColor(.blue)
+                        }
+
+                        if let items = detailedBreakdown[user] {
+                            VStack(spacing: 8) {
+                                ForEach(items, id: \.self) { itemDetail in
+                                    HStack(alignment: .firstTextBaseline) {
+                                        Text(itemDetail.item)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text("$\(itemDetail.cost, specifier: "%.2f")")
+                                            .font(.subheadline)
+                                            .foregroundColor(.green)
+                                    }
+                                    .padding(.leading, 32)
+                                }
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(12)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+    }
+}
+
+
