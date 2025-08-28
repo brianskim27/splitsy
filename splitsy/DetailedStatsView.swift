@@ -10,6 +10,7 @@ struct DetailedStatsView: View {
     @State private var selectedDataPoint: MonthData?
     @State private var animateButton = false
     @State private var pressedPeriod: TimePeriod?
+    @State private var showDescription = false
     
     enum StatType {
         case totalSpent
@@ -22,7 +23,7 @@ struct DetailedStatsView: View {
             case .totalSpent: return "Total Spent"
             case .moneySaved: return "Money Saved"
             case .splits: return "Splits"
-            case .people: return "People"
+            case .people: return "Unique People"
             }
         }
         
@@ -78,6 +79,9 @@ struct DetailedStatsView: View {
             for week in 1...weeksInMonth {
                 let weekStart = calendar.dateInterval(of: .weekOfYear, for: monthStart)?.start ?? monthStart
                 let adjustedWeekStart = calendar.date(byAdding: .weekOfYear, value: week - 1, to: weekStart) ?? weekStart
+                
+                // Only include weeks that have already started
+                guard adjustedWeekStart <= now else { continue }
                 
                 let weekEnd = calendar.date(byAdding: .day, value: 7, to: adjustedWeekStart) ?? adjustedWeekStart
                 
@@ -360,14 +364,18 @@ struct DetailedStatsView: View {
                             
                             // Summary Stats
                             VStack(spacing: 12) {
-                                let currentValue = chartData.last?.value ?? 0
-                                let previousValue = chartData.count > 1 ? chartData[chartData.count - 2].value : 0
+                                // Use selected data point if available, otherwise use most recent data point
+                                let currentValue = selectedDataPoint?.value ?? (chartData.last?.value ?? 0)
+                                let currentIndex = selectedDataPoint != nil ? 
+                                    (chartData.firstIndex(where: { $0.month == selectedDataPoint?.month }) ?? chartData.count - 1) :
+                                    chartData.count - 1
+                                let previousValue = currentIndex > 0 ? chartData[currentIndex - 1].value : 0
                                 let change = currentValue - previousValue
                                 let changePercent = previousValue > 0 ? (change / previousValue) * 100 : 0
                                 
                                 HStack {
                                     VStack(alignment: .leading) {
-                                        Text("Current")
+                                        Text(selectedDataPoint != nil ? "Selected" : "Current")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                         Text(formatValue(currentValue))
@@ -400,6 +408,46 @@ struct DetailedStatsView: View {
                                             .font(.caption)
                                             .foregroundColor(changePercent >= 0 ? .green : .red)
                                     }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                            
+                            // Average Stats
+                            VStack(spacing: 12) {
+                                let averageValue = chartData.isEmpty ? 0 : chartData.reduce(0) { $0 + $1.value } / Double(chartData.count)
+                                let totalValue = chartData.reduce(0) { $0 + $1.value }
+                                
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text("Average")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text(formatValue(averageValue))
+                                            .font(.title2)
+                                            .bold()
+                                    }
+                                    Spacer()
+                                    VStack(alignment: .trailing) {
+                                        Text("Total")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text(formatValue(totalValue))
+                                            .font(.subheadline)
+                                            .bold()
+                                    }
+                                }
+                                
+                                HStack {
+                                    Text("across selected period")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text("\(chartData.count) \(selectedPeriod == .selectedMonth ? "weeks" : "months")")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                             }
                             .padding()
@@ -463,15 +511,74 @@ struct DetailedStatsView: View {
                     }
                 }
                 .padding(.top)
+                
                 .navigationTitle("\(statType.title) Trends")
                 .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        GeometryReader { geometry in
+                            Button(action: {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    showDescription.toggle()
+                                }
+                            }) {
+                                Image(systemName: "info.circle")
+                                    .font(.body)
+                                    .foregroundColor(.blue)
+                                    .background(
+                                        Circle()
+                                            .fill(showDescription ? Color.blue.opacity(0.1) : Color.clear)
+                                            .frame(width: 20, height: 20)
+                                    )
+                                    .animation(.easeInOut(duration: 0.2), value: showDescription)
+                            }
+                            .offset(x: -12, y: 0)
+                            .background(
+                                // Info popup - quotation box style
+                                Group {
+                                    if showDescription {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text("About \(statType.title)")
+                                                .font(.subheadline)
+                                                .bold()
+                                            
+                                            Text(getStatDescription())
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                        }
+                                        .padding(.top, 21)
+                                        .padding(.horizontal, 12)
+                                        .padding(.bottom, 12)
+                                        .background(
+                                            SpeechBubble()
+                                                .fill(Color(.systemBackground))
+                                                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                        )
+                                        .frame(width: 345)
+                                        .offset(x: -160, y: 105) // Position relative to button in nav bar
+                                        .transition(.scale(scale: 0.8).combined(with: .opacity))
+                                        .zIndex(1000)
+                                    }
+                                }
+                            )
+                        }
+                        .frame(width: 20, height: 20)
+                    }
+                }
                 .onTapGesture {
                     if showPeriodDropdown {
                         showPeriodDropdown = false
                     }
+                    if showDescription {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                            showDescription = false
+                        }
+                    }
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: showPeriodDropdown)
+            .animation(.easeInOut(duration: 0.3), value: showDescription)
         }
     }
     
@@ -481,6 +588,22 @@ struct DetailedStatsView: View {
             return String(format: "$%.2f", value)
         case .splits, .people:
             return String(format: "%.0f", value)
+        }
+    }
+    
+    private func getStatDescription() -> String {
+        switch statType {
+        case .totalSpent:
+            return "Total Spent tracks the complete cost of all your splits over time. This represents the full amount of each bill or expense before it was divided among participants. Use this metric to understand your overall spending patterns and identify peak spending periods."
+            
+        case .moneySaved:
+            return "Money Saved shows how much you've saved by splitting expenses instead of paying the full amount yourself. This is calculated as the difference between the total cost and your personal share across all splits. It demonstrates the financial benefit of sharing costs with others."
+            
+        case .splits:
+            return "Splits tracks the number of individual expense-sharing transactions you've completed. Each time you split a bill, meal, or other expense with friends or colleagues, it counts as one split. This metric helps you understand your sharing frequency and social spending habits."
+            
+        case .people:
+            return "Unique People shows the number of unique individuals you've shared expenses with during each time period. This metric reflects the diversity of your social spending network and can help you understand how your circle of shared experiences grows over time."
         }
     }
     
@@ -501,4 +624,41 @@ struct MonthData: Identifiable {
     let month: String
     let value: Double
     let fullWeekRange: String
+}
+
+// Speech bubble shape with upward-pointing tail
+struct SpeechBubble: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let cornerRadius: CGFloat = 12
+        let tailWidth: CGFloat = 20
+        let tailHeight: CGFloat = 15
+        
+        // Position tail at top-right area (accounting for rounded corners)
+        let tailCenterX = rect.maxX - (cornerRadius + tailWidth/2) + 2 // Keep tail within rounded corner bounds
+        
+        // Start from top-left corner (main rectangle starts below tail area)
+        path.move(to: CGPoint(x: cornerRadius, y: tailHeight))
+        
+        // Top edge with integrated tail
+        path.addLine(to: CGPoint(x: tailCenterX - tailWidth/2, y: tailHeight)) // Left side of tail base
+        path.addLine(to: CGPoint(x: tailCenterX, y: 0)) // Tail tip
+        path.addLine(to: CGPoint(x: tailCenterX + tailWidth/2, y: tailHeight)) // Right side of tail base
+        path.addLine(to: CGPoint(x: rect.maxX - cornerRadius, y: tailHeight)) // Continue to right edge
+        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: tailHeight + cornerRadius), control: CGPoint(x: rect.maxX, y: tailHeight))
+        
+        // Right edge
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerRadius))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - cornerRadius, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
+        
+        // Bottom edge
+        path.addLine(to: CGPoint(x: cornerRadius, y: rect.maxY))
+        path.addQuadCurve(to: CGPoint(x: 0, y: rect.maxY - cornerRadius), control: CGPoint(x: 0, y: rect.maxY))
+        
+        // Left edge
+        path.addLine(to: CGPoint(x: 0, y: tailHeight + cornerRadius))
+        path.addQuadCurve(to: CGPoint(x: cornerRadius, y: tailHeight), control: CGPoint(x: 0, y: tailHeight))
+        
+        return path
+    }
 }

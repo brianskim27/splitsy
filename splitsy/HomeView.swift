@@ -264,7 +264,7 @@ struct StatisticsDashboard: View {
                 )
                 
                 StatCard(
-                    title: "People",
+                    title: "Unique People",
                     value: "\(uniquePeopleThisMonth)",
                     icon: "person.2.fill",
                     color: .purple,
