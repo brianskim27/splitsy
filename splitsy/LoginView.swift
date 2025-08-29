@@ -135,6 +135,7 @@ struct LoginView: View {
                         // Social Sign In buttons
                         VStack(spacing: 12) {
                             // Apple Sign In button
+                            /*
                             Button(action: {
                                 authManager.signInWithApple()
                             }) {
@@ -151,6 +152,7 @@ struct LoginView: View {
                                 .cornerRadius(12)
                             }
                             .disabled(authManager.isLoading)
+                            */
                             
                             // Google Sign In button
                             Button(action: {

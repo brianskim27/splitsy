@@ -9,22 +9,51 @@ enum AuthState {
 }
 
 class AuthenticationManager: ObservableObject {
-    @Published var authState: AuthState = .signedOut
+    @Published var authState: AuthState = .loading
     @Published var currentUser: User?
     @Published var isLoading = false
     @Published var errorMessage: String?
     
     private let firebaseService = FirebaseService.shared
     
+    private var cancellables = Set<AnyCancellable>()
+    
+    private func checkInitialAuthState() {
+        // Check if there's a current user in Firebase Auth directly
+        if let currentUser = firebaseService.auth.currentUser {
+            authState = .signedIn
+        } else if firebaseService.isAuthenticated {
+            authState = .signedIn
+        } else {
+            authState = .signedOut
+        }
+    }
+    
     init() {
-        // Listen to Firebase authentication state
+        // Set initial loading state
+        authState = .loading
+        
+        // Listen to Firebase authentication state changes
         firebaseService.$isAuthenticated
             .sink { [weak self] isAuthenticated in
                 DispatchQueue.main.async {
-                    self?.authState = isAuthenticated ? .signedIn : .signedOut
+                    // Only update state if we're not in the initial loading phase
+                    if self?.authState != .loading {
+                        self?.authState = isAuthenticated ? .signedIn : .signedOut
+                    }
                 }
             }
             .store(in: &cancellables)
+        
+        // Check current Firebase auth state after a minimum loading time
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            self?.checkInitialAuthState()
+        }
+        
+        // Also check again after a longer delay to ensure Firebase is fully initialized
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.checkInitialAuthState()
+        }
         
         firebaseService.$currentUser
             .sink { [weak self] user in
@@ -50,8 +79,6 @@ class AuthenticationManager: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
-    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Authentication Methods
     
@@ -99,11 +126,13 @@ class AuthenticationManager: ObservableObject {
     
     // MARK: - Social Login Methods
     
+    /*
     func signInWithApple() {
         Task {
             await firebaseService.signInWithApple()
         }
     }
+    */
     
     func signInWithGoogle() {
         Task {

@@ -8,7 +8,7 @@ import GoogleSignIn
 class FirebaseService: ObservableObject {
     static let shared = FirebaseService()
     
-    private let auth = Auth.auth()
+    let auth = Auth.auth()
     private let db = Firestore.firestore()
     
     @Published var currentUser: User?
@@ -17,8 +17,16 @@ class FirebaseService: ObservableObject {
     @Published var errorMessage: String?
     
     private init() {
+        // Configure Firebase settings for better network handling
+        let settings = FirestoreSettings()
+        settings.cacheSettings = PersistentCacheSettings(sizeBytes: NSNumber(value: FirestoreCacheSizeUnlimited))
+        db.settings = settings
+        
+        // Check initial authentication state immediately
+        checkInitialAuthState()
+        
         // Listen for authentication state changes
-        auth.addStateDidChangeListener { [weak self] _, user in
+        _ = auth.addStateDidChangeListener { [weak self] _, user in
             DispatchQueue.main.async {
                 if let firebaseUser = user {
                     self?.handleUserSignIn(firebaseUser)
@@ -26,6 +34,14 @@ class FirebaseService: ObservableObject {
                     self?.handleUserSignOut()
                 }
             }
+        }
+    }
+    
+    private func checkInitialAuthState() {
+        if let currentUser = auth.currentUser {
+            handleUserSignIn(currentUser)
+        } else {
+            handleUserSignOut()
         }
     }
     
@@ -38,11 +54,11 @@ class FirebaseService: ObservableObject {
         }
         
         do {
-            let result = try await auth.createUser(withEmail: email, password: password)
+            let authResult = try await auth.createUser(withEmail: email, password: password)
             
             // Create user profile in Firestore
             let user = User(
-                id: result.user.uid,
+                id: authResult.user.uid,
                 email: email.lowercased(),
                 name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                 createdAt: Date()
@@ -71,7 +87,7 @@ class FirebaseService: ObservableObject {
         }
         
         do {
-            let result = try await auth.signIn(withEmail: email, password: password)
+            _ = try await auth.signIn(withEmail: email, password: password)
             
             // User will be handled by the auth state listener
             DispatchQueue.main.async {
@@ -138,6 +154,7 @@ class FirebaseService: ObservableObject {
     
     // MARK: - Apple Sign In
     
+    /*
     func signInWithApple() async {
         DispatchQueue.main.async {
             self.isLoading = true
@@ -148,21 +165,23 @@ class FirebaseService: ObservableObject {
             let request = ASAuthorizationAppleIDProvider().createRequest()
             request.requestedScopes = [.fullName, .email]
             
-            let result = try await withCheckedThrowingContinuation { continuation in
-                let controller = ASAuthorizationController(authorizationRequests: [request])
-                let delegate = AppleSignInDelegate { result in
-                    continuation.resume(with: result)
+            let authResult = try await withCheckedThrowingContinuation { continuation in
+                Task { @MainActor in
+                    let controller = ASAuthorizationController(authorizationRequests: [request])
+                    let delegate = AppleSignInDelegate { result in
+                        continuation.resume(with: result)
+                    }
+                    controller.delegate = delegate
+                    controller.presentationContextProvider = delegate
+                    controller.performRequests()
+                    
+                    // Store delegate to prevent deallocation
+                    objc_setAssociatedObject(controller, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN)
                 }
-                controller.delegate = delegate
-                controller.presentationContextProvider = delegate
-                controller.performRequests()
-                
-                // Store delegate to prevent deallocation
-                objc_setAssociatedObject(controller, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN)
             }
             
             // Handle Apple Sign In result
-            if let appleIDCredential = result as? ASAuthorizationAppleIDCredential {
+            if let appleIDCredential = authResult.credential as? ASAuthorizationAppleIDCredential {
                 try await handleAppleSignIn(credential: appleIDCredential)
             }
             
@@ -176,7 +195,7 @@ class FirebaseService: ObservableObject {
     
     private func handleAppleSignIn(credential: ASAuthorizationAppleIDCredential) async throws {
         guard let appleIDToken = credential.identityToken,
-              let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+              let _ = String(data: appleIDToken, encoding: .utf8) else {
             throw NSError(domain: "FirebaseService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid Apple ID token"])
         }
         
@@ -236,6 +255,7 @@ class FirebaseService: ObservableObject {
         
         return result
     }
+    */
     
     // MARK: - Google Sign In
     
@@ -253,21 +273,21 @@ class FirebaseService: ObservableObject {
             let config = GIDConfiguration(clientID: clientID)
             GIDSignIn.sharedInstance.configuration = config
             
-            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                  let window = windowScene.windows.first,
-                  let rootViewController = window.rootViewController else {
+            guard let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let window = await windowScene.windows.first,
+                  let rootViewController = await window.rootViewController else {
                 throw NSError(domain: "FirebaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "No root view controller available"])
             }
             
-            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
+            let signInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
             
-            guard let idToken = result.user.idToken?.tokenString else {
+            guard let idToken = signInResult.user.idToken?.tokenString else {
                 throw NSError(domain: "FirebaseService", code: 4, userInfo: [NSLocalizedDescriptionKey: "No Google ID token available"])
             }
             
             let credential = GoogleAuthProvider.credential(
                 withIDToken: idToken,
-                accessToken: result.user.accessToken.tokenString
+                accessToken: signInResult.user.accessToken.tokenString
             )
             
             let authResult = try await auth.signIn(with: credential)
@@ -279,8 +299,8 @@ class FirebaseService: ObservableObject {
                 // Create user profile for new users
                 let user = User(
                     id: authResult.user.uid,
-                    email: result.user.profile?.email ?? "",
-                    name: result.user.profile?.name ?? "Google User",
+                    email: signInResult.user.profile?.email ?? "",
+                    name: signInResult.user.profile?.name ?? "Google User",
                     createdAt: Date()
                 )
                 
@@ -470,15 +490,12 @@ class FirebaseService: ObservableObject {
         }
         
         // Handle custom errors
-        if let nsError = error as? NSError {
-            switch nsError.domain {
-            case "FirebaseService":
-                return nsError.localizedDescription
-            default:
-                return error.localizedDescription
-            }
+        let nsError = error as NSError
+        switch nsError.domain {
+        case "FirebaseService":
+            return nsError.localizedDescription
+        default:
+            return error.localizedDescription
         }
-        
-        return error.localizedDescription
     }
 }

@@ -3,9 +3,7 @@ import Firebase
 
 @main
 struct splitsyApp: App {
-    init() {
-        FirebaseApp.configure()
-    }
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var splitHistoryManager = SplitHistoryManager()
     @StateObject private var funFactsManager = FunFactsManager()
     @StateObject private var authManager = AuthenticationManager()
@@ -43,11 +41,20 @@ struct LoadingView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 20) {
+                Image(systemName: "chart.pie.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.blue)
+                
+                Text("Splitsy")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                
                 ProgressView()
-                    .scaleEffect(1.5)
+                    .scaleEffect(1.2)
+                    .padding(.top, 20)
                 
                 Text("Loading...")
-                    .font(.headline)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
             }
         }
