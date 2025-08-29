@@ -61,6 +61,7 @@ class FirebaseService: ObservableObject {
                 id: authResult.user.uid,
                 email: email.lowercased(),
                 name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                username: "", // Will be set later
                 createdAt: Date()
             )
             
@@ -80,17 +81,30 @@ class FirebaseService: ObservableObject {
         }
     }
     
-    func signIn(email: String, password: String) async {
+    func signUpWithUsername(email: String, password: String, name: String, username: String) async {
         DispatchQueue.main.async {
             self.isLoading = true
             self.errorMessage = nil
         }
         
         do {
-            _ = try await auth.signIn(withEmail: email, password: password)
+            let authResult = try await auth.createUser(withEmail: email, password: password)
             
-            // User will be handled by the auth state listener
+            // Create user profile in Firestore
+            let user = User(
+                id: authResult.user.uid,
+                email: email.lowercased(),
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                username: username.lowercased(),
+                createdAt: Date()
+            )
+            
+            try await saveUserToFirestore(user)
+            try await reserveUsername(username: username.lowercased(), userId: authResult.user.uid)
+            
             DispatchQueue.main.async {
+                self.currentUser = user
+                self.isAuthenticated = true
                 self.isLoading = false
             }
             
@@ -102,6 +116,132 @@ class FirebaseService: ObservableObject {
         }
     }
     
+    func checkUsernameAvailability(_ username: String) async -> Bool {
+        do {
+            let usernameDoc = try await db.collection("usernames").document(username.lowercased()).getDocument()
+            return !usernameDoc.exists
+        } catch {
+            return false
+        }
+    }
+    
+    func updateProfile(name: String, username: String?) async {
+        guard let currentUser = self.currentUser else { return }
+        
+        do {
+            var updates: [String: Any] = ["name": name]
+            
+            if let newUsername = username, newUsername != currentUser.username {
+                // Check if username is available
+                let isAvailable = await checkUsernameAvailability(newUsername)
+                if !isAvailable {
+                    throw NSError(domain: "FirebaseService", code: 5, userInfo: [NSLocalizedDescriptionKey: "Username is already taken"])
+                }
+                
+                // Release old username
+                if !currentUser.username.isEmpty {
+                    try await db.collection("usernames").document(currentUser.username).delete()
+                }
+                
+                // Reserve new username
+                try await reserveUsername(username: newUsername.lowercased(), userId: currentUser.id)
+                updates["username"] = newUsername.lowercased()
+                updates["usernameLastChanged"] = Timestamp(date: Date())
+            }
+            
+            try await db.collection("users").document(currentUser.id).updateData(updates)
+            
+            // Update local user object
+            let updatedUser = User(
+                id: currentUser.id,
+                email: currentUser.email,
+                name: name,
+                username: username ?? currentUser.username,
+                createdAt: currentUser.createdAt,
+                usernameLastChanged: username != currentUser.username ? Date() : currentUser.usernameLastChanged,
+                assignedItemIDs: currentUser.assignedItemIDs
+            )
+            
+            DispatchQueue.main.async {
+                self.currentUser = updatedUser
+            }
+            
+        } catch {
+            DispatchQueue.main.async {
+                self.errorMessage = error.localizedDescription
+            }
+        }
+    }
+    
+    private func reserveUsername(username: String, userId: String) async throws {
+        try await db.collection("usernames").document(username.lowercased()).setData([
+            "userId": userId,
+            "reservedAt": Timestamp(date: Date())
+        ])
+    }
+    
+    func signIn(email: String, password: String) async {
+        await signIn(emailOrUsername: email, password: password)
+    }
+    
+    func signIn(emailOrUsername: String, password: String) async {
+        DispatchQueue.main.async {
+            self.isLoading = true
+            self.errorMessage = nil
+        }
+        
+        do {
+            // First, try to sign in directly (in case it's an email)
+            do {
+                _ = try await auth.signIn(withEmail: emailOrUsername, password: password)
+                
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+                return
+                
+            } catch {
+                // If direct sign-in fails, check if it's a username
+                if emailOrUsername.contains("@") {
+                    // It was an email, so the error is legitimate
+                    throw error
+                }
+                
+                // Try to find user by username
+                let userEmail = try await findUserEmailByUsername(emailOrUsername)
+                _ = try await auth.signIn(withEmail: userEmail, password: password)
+                
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+            }
+            
+        } catch {
+            DispatchQueue.main.async {
+                self.errorMessage = self.getErrorMessage(from: error)
+                self.isLoading = false
+            }
+        }
+    }
+    
+    private func findUserEmailByUsername(_ username: String) async throws -> String {
+        let usernameDoc = try await db.collection("usernames").document(username.lowercased()).getDocument()
+        
+        guard usernameDoc.exists,
+              let userId = usernameDoc.data()?["userId"] as? String else {
+            throw NSError(domain: "FirebaseService", code: 6, userInfo: [NSLocalizedDescriptionKey: "Username not found"])
+        }
+        
+        let userDoc = try await db.collection("users").document(userId).getDocument()
+        
+        guard let userData = userDoc.data(),
+              let email = userData["email"] as? String else {
+            throw NSError(domain: "FirebaseService", code: 7, userInfo: [NSLocalizedDescriptionKey: "User profile not found"])
+        }
+        
+        return email
+    }
+    
     func signOut() async {
         DispatchQueue.main.async {
             self.isLoading = true
@@ -110,6 +250,9 @@ class FirebaseService: ObservableObject {
         do {
             try auth.signOut()
             // User will be handled by the auth state listener
+            DispatchQueue.main.async {
+                self.isLoading = false
+            }
         } catch {
             DispatchQueue.main.async {
                 self.errorMessage = "Failed to sign out: \(error.localizedDescription)"
@@ -301,6 +444,7 @@ class FirebaseService: ObservableObject {
                     id: authResult.user.uid,
                     email: signInResult.user.profile?.email ?? "",
                     name: signInResult.user.profile?.name ?? "Google User",
+                    username: "",
                     createdAt: Date()
                 )
                 
@@ -431,7 +575,9 @@ class FirebaseService: ObservableObject {
                         id: firebaseUser.uid,
                         email: userData["email"] as? String ?? "",
                         name: userData["name"] as? String ?? "",
-                        createdAt: (userData["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+                        username: userData["username"] as? String ?? "",
+                        createdAt: (userData["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                        usernameLastChanged: (userData["usernameLastChanged"] as? Timestamp)?.dateValue()
                     )
                     
                     DispatchQueue.main.async {
@@ -462,11 +608,18 @@ class FirebaseService: ObservableObject {
     }
     
     private func saveUserToFirestore(_ user: User) async throws {
-        try await db.collection("users").document(user.id).setData([
+        var data: [String: Any] = [
             "email": user.email,
             "name": user.name,
+            "username": user.username,
             "createdAt": Timestamp(date: user.createdAt)
-        ])
+        ]
+        
+        if let usernameLastChanged = user.usernameLastChanged {
+            data["usernameLastChanged"] = Timestamp(date: usernameLastChanged)
+        }
+        
+        try await db.collection("users").document(user.id).setData(data)
     }
     
     private func getErrorMessage(from error: Error) -> String {
@@ -493,7 +646,14 @@ class FirebaseService: ObservableObject {
         let nsError = error as NSError
         switch nsError.domain {
         case "FirebaseService":
-            return nsError.localizedDescription
+            switch nsError.code {
+            case 6:
+                return "Username not found. Please check your username and try again."
+            case 7:
+                return "User profile not found. Please contact support."
+            default:
+                return nsError.localizedDescription
+            }
         default:
             return error.localizedDescription
         }

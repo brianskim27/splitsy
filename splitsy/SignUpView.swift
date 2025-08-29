@@ -7,6 +7,7 @@ struct SignUpView: View {
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var name = ""
+    @State private var showUsernameSetup = false
     @FocusState private var focusedField: Field?
     
     enum Field {
@@ -172,6 +173,10 @@ struct SignUpView: View {
                     }
                 }
             }
+            .fullScreenCover(isPresented: $showUsernameSetup) {
+                UsernameSetupView(email: email, password: password)
+                    .environmentObject(authManager)
+            }
         }
     }
     
@@ -186,6 +191,6 @@ struct SignUpView: View {
     
     private func signUp() {
         guard isFormValid else { return }
-        authManager.signUp(email: email, password: password, name: name)
+        showUsernameSetup = true
     }
 }

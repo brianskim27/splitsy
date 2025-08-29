@@ -20,7 +20,7 @@ class AuthenticationManager: ObservableObject {
     
     private func checkInitialAuthState() {
         // Check if there's a current user in Firebase Auth directly
-        if let currentUser = firebaseService.auth.currentUser {
+        if firebaseService.auth.currentUser != nil {
             authState = .signedIn
         } else if firebaseService.isAuthenticated {
             authState = .signedIn
@@ -88,9 +88,27 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
+    func signUpWithUsername(email: String, password: String, name: String, username: String) async {
+        await firebaseService.signUpWithUsername(email: email, password: password, name: name, username: username)
+    }
+    
+    func checkUsernameAvailability(_ username: String) async -> Bool {
+        return await firebaseService.checkUsernameAvailability(username)
+    }
+    
+    func updateProfile(name: String, username: String?) async {
+        await firebaseService.updateProfile(name: name, username: username)
+    }
+    
     func signIn(email: String, password: String) {
         Task {
             await firebaseService.signIn(email: email, password: password)
+        }
+    }
+    
+    func signIn(emailOrUsername: String, password: String) {
+        Task {
+            await firebaseService.signIn(emailOrUsername: emailOrUsername, password: password)
         }
     }
     

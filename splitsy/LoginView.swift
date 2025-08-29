@@ -43,16 +43,16 @@ struct LoginView: View {
                         
                         // Login form
                         VStack(spacing: 20) {
-                            // Email field
+                            // Email or Username field
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Email")
+                                Text("Email or Username")
                                     .font(.headline)
                                     .foregroundColor(.primary)
                                 
-                                TextField("Enter your email", text: $email)
+                                TextField("Enter your email or username", text: $email)
                                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                                    .keyboardType(.emailAddress)
                                     .autocapitalization(.none)
+                                    .disableAutocorrection(true)
                                     .focused($focusedField, equals: .email)
                                     .onSubmit {
                                         focusedField = .password
@@ -200,7 +200,7 @@ struct LoginView: View {
     }
     
     private func signIn() {
-        authManager.signIn(email: email, password: password)
+        authManager.signIn(emailOrUsername: email, password: password)
     }
 }
 
