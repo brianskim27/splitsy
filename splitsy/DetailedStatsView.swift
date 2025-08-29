@@ -44,6 +44,15 @@ struct DetailedStatsView: View {
             case .people: return .purple
             }
         }
+        
+        var infographicOffset: (x: CGFloat, y: CGFloat) {
+            switch self {
+            case .totalSpent: return (x: -160, y: 105)
+            case .moneySaved: return (x: -160, y: 115)
+            case .splits: return (x: -158, y: 115)
+            case .people: return (x: -155, y: 105)
+            }
+        }
     }
     
     enum TimePeriod: String, CaseIterable {
@@ -556,7 +565,7 @@ struct DetailedStatsView: View {
                                                 .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
                                         )
                                         .frame(width: 345)
-                                        .offset(x: -160, y: 105) // Position relative to button in nav bar
+                                        .offset(x: statType.infographicOffset.x, y: statType.infographicOffset.y)
                                         .transition(.scale(scale: 0.8).combined(with: .opacity))
                                         .zIndex(1000)
                                     }
