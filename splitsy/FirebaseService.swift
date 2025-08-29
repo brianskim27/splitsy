@@ -416,9 +416,17 @@ class FirebaseService: ObservableObject {
             let config = GIDConfiguration(clientID: clientID)
             GIDSignIn.sharedInstance.configuration = config
             
-            guard let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                  let window = await windowScene.windows.first,
-                  let rootViewController = await window.rootViewController else {
+            // Get UI elements on main thread
+            let rootViewController = await MainActor.run {
+                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let window = windowScene.windows.first,
+                      let rootViewController = window.rootViewController else {
+                    return nil as UIViewController?
+                }
+                return rootViewController
+            }
+            
+            guard let rootViewController = rootViewController else {
                 throw NSError(domain: "FirebaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "No root view controller available"])
             }
             
