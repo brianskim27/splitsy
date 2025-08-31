@@ -711,7 +711,7 @@ class FirebaseService: ObservableObject {
             metadata.contentType = "image/jpeg"
             
             print("🔥 FirebaseService: Starting upload to Firebase Storage...")
-            let uploadResult = try await storageRef.putDataAsync(imageData, metadata: metadata)
+            _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
             print("✅ FirebaseService: Image uploaded successfully to Firebase Storage")
             
             // Get download URL with retry logic

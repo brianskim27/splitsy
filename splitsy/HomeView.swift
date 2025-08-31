@@ -18,24 +18,22 @@ struct HomeView: View {
     }
 
     var body: some View {
-        ZStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    HStack {
-                        Text("Hi, \(authManager.currentUser?.name ?? "User")!")
-                            .font(.largeTitle)
-                            .bold()
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            showQuickSplit = true
-                        }) {
-                            HStack(spacing: 6) {
-                                Text("Quick Split")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                            }
+        ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                // Title and Quick Split Button Row
+                HStack {
+                    Text("Splitsy")
+                        .font(.largeTitle)
+                        .bold()
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showQuickSplit = true
+                    }) {
+                        Text("Quick Split")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
@@ -48,33 +46,32 @@ struct HomeView: View {
                             )
                             .cornerRadius(20)
                             .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
-                        }
                     }
-                    .padding(.top)
-                    
-                    HStack(spacing: 6) {
-                        Image(systemName: "lightbulb.fill")
-                            .font(.subheadline)
-                            .foregroundColor(.orange)
-                        Text(funFactsManager.currentFunFact.isEmpty ? "You've split with \(uniquePeopleThisMonth) people so far this month." : funFactsManager.currentFunFact)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.bottom, 4)
-                    
-                    // Statistics Dashboard
-                    StatisticsDashboard()
-                        .padding(.bottom, 8)
-                    
-                    // Recent Splits Section
-                    RecentSplitsSection()
-                        .padding(.bottom, 100)
                 }
-                .padding(.horizontal)
-                .fullScreenCover(isPresented: $showNewSplit) {
-                    NewSplitFlowView()
+                
+                HStack(spacing: 6) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.subheadline)
+                        .foregroundColor(.orange)
+                    Text(funFactsManager.currentFunFact.isEmpty ? "You've split with \(uniquePeopleThisMonth) people so far this month." : funFactsManager.currentFunFact)
+                        .font(.body)
+                        .foregroundColor(.secondary)
                 }
+                .padding(.bottom, 4)
+                
+                // Statistics Dashboard
+                StatisticsDashboard()
+                    .padding(.bottom, 8)
+                
+                // Recent Splits Section
+                RecentSplitsSection()
+                    .padding(.bottom, 90)
             }
+            .padding(.horizontal)
+        }
+        .navigationBarHidden(true)
+        .fullScreenCover(isPresented: $showNewSplit) {
+            NewSplitFlowView()
         }
         .sheet(isPresented: $showQuickSplit) {
             QuickSplitView()
@@ -424,38 +421,38 @@ struct MonthOptionButton: View {
     }
     
     var body: some View {
-                                Button(action: onTap) {
-                            HStack {
-                                Text(monthString)
-                                    .font(.subheadline)
-                                    .fontWeight(isSelected ? .semibold : .regular)
-                                    .foregroundColor(isSelected ? .white : .primary)
-                                
-                                Spacer()
-                                
-                                if isSelected {
-                                    Image(systemName: "checkmark")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .contentShape(Rectangle())
-                        }
-                        .background(
-                            Group {
-                                if isSelected {
-                                    Color.blue
-                                } else if isPressed {
-                                    Color(.systemGray5)
-                                } else {
-                                    Color.clear
-                                }
-                            }
-                        )
-                        .buttonStyle(PlainButtonStyle())
+        Button(action: onTap) {
+            HStack {
+                Text(monthString)
+                    .font(.subheadline)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                    .foregroundColor(isSelected ? .white : .primary)
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .contentShape(Rectangle())
+        }
+        .background(
+            Group {
+                if isSelected {
+                    Color.blue
+                } else if isPressed {
+                    Color(.systemGray5)
+                } else {
+                    Color.clear
+                }
+            }
+        )
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

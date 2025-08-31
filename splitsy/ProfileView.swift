@@ -39,8 +39,10 @@ struct ProfileView: View {
             }
             .padding(.horizontal)
         }
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarHidden(true)
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 0)
+        }
         .sheet(isPresented: $showEditProfile) {
             EditProfileView()
                 .environmentObject(authManager)
@@ -341,7 +343,7 @@ struct ProfileView: View {
             .background(Color(.systemGray6))
             .cornerRadius(12)
         }
-        .padding(.bottom, 20)
+        .padding(.bottom, 80)
     }
     
     // MARK: - Computed Properties
