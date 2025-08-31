@@ -100,6 +100,18 @@ class AuthenticationManager: ObservableObject {
         await firebaseService.updateProfile(name: name, username: username)
     }
     
+    func uploadProfilePicture(_ image: UIImage) async {
+        print("🔐 AuthenticationManager: Uploading profile picture...")
+        await firebaseService.uploadProfilePicture(image)
+        print("🔐 AuthenticationManager: Profile picture upload completed")
+    }
+    
+    func removeProfilePicture() async {
+        print("🔐 AuthenticationManager: Removing profile picture...")
+        await firebaseService.removeProfilePicture()
+        print("🔐 AuthenticationManager: Profile picture removal completed")
+    }
+    
     func signIn(email: String, password: String) {
         Task {
             await firebaseService.signIn(email: email, password: password)

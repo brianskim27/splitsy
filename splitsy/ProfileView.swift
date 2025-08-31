@@ -93,22 +93,26 @@ struct ProfileView: View {
     private var profileHeader: some View {
         HStack(spacing: 16) {
             // Profile Picture
-            Button(action: {
-                // TODO: Add profile picture upload
-            }) {
-                ZStack {
+            ZStack {
+                if let profilePictureURL = authManager.currentUser?.profilePictureURL,
+                   let url = URL(string: profilePictureURL) {
+                    AsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 80, height: 80)
+                            .clipShape(Circle())
+                    } placeholder: {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .frame(width: 80, height: 80)
+                            .foregroundColor(.blue)
+                    }
+                } else {
                     Image(systemName: "person.crop.circle.fill")
                         .resizable()
                         .frame(width: 80, height: 80)
                         .foregroundColor(.blue)
-                    
-                    Image(systemName: "camera.fill")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                        .padding(6)
-                        .background(Color.blue)
-                        .clipShape(Circle())
-                        .offset(x: 25, y: 25)
                 }
             }
             
@@ -445,6 +449,10 @@ struct EditProfileView: View {
     @State private var usernameAvailable = false
     @State private var showUsernameTaken = false
     @State private var showSaveConfirmation = false
+    @State private var showImagePicker = false
+    @State private var showImageSourceSheet = false
+    @State private var selectedImage: UIImage?
+    @State private var imagePickerSourceType: ImagePickerSourceType = .photoLibrary
     
     var body: some View {
         NavigationView {
@@ -468,6 +476,63 @@ struct EditProfileView: View {
                 
                 // Form
                 VStack(spacing: 20) {
+                    // Profile Picture
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Profile Picture")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        HStack {
+                            // Profile Picture Display
+                                        Button(action: {
+                showImageSourceSheet = true
+            }) {
+                                ZStack {
+                                    if let profilePictureURL = authManager.currentUser?.profilePictureURL,
+                                       let url = URL(string: profilePictureURL) {
+                                        AsyncImage(url: url) { image in
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 80, height: 80)
+                                                .clipShape(Circle())
+                                        } placeholder: {
+                                            Image(systemName: "person.crop.circle.fill")
+                                                .resizable()
+                                                .frame(width: 80, height: 80)
+                                                .foregroundColor(.blue)
+                                        }
+                                    } else {
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .resizable()
+                                            .frame(width: 80, height: 80)
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                                        Image(systemName: "pencil")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .padding(6)
+                        .background(Color.blue)
+                        .clipShape(Circle())
+                        .offset(x: 25, y: 25)
+                                }
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Tap to change")
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                
+                                Text("Choose from camera or photo library")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                        }
+                    }
+                    
                     // Display Name
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Display Name")
@@ -631,6 +696,27 @@ struct EditProfileView: View {
             }
         } message: {
             Text("Are you sure you want to save these changes to your profile?")
+        }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(image: $selectedImage, sourceType: imagePickerSourceType)
+        }
+        .sheet(isPresented: $showImageSourceSheet) {
+            ImageSourceSheet(
+                showImagePicker: $showImagePicker,
+                imagePickerSourceType: $imagePickerSourceType,
+                hasProfilePicture: authManager.currentUser?.profilePictureURL != nil,
+                authManager: authManager
+            )
+        }
+        .onChange(of: selectedImage) { _, newImage in
+            print("📸 ProfileView: Image selected - \(newImage != nil ? "Image present" : "No image")")
+            if let image = newImage {
+                print("📸 ProfileView: Starting upload process...")
+                Task {
+                    await authManager.uploadProfilePicture(image)
+                    selectedImage = nil
+                }
+            }
         }
     }
     
@@ -827,5 +913,157 @@ struct DataExportView: View {
                 }
             }
         }
+    }
+}
+
+struct ImageSourceSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var showImagePicker: Bool
+    @Binding var imagePickerSourceType: ImagePickerSourceType
+    let hasProfilePicture: Bool
+    let authManager: AuthenticationManager
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 16) {
+                    Text("Profile Picture")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text("Choose how you'd like to update your profile picture")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 24)
+                
+                // Options
+                VStack(spacing: 0) {
+                    // Camera option
+                    Button(action: {
+                        imagePickerSourceType = .camera
+                        showImagePicker = true
+                        dismiss()
+                    }) {
+                        HStack(spacing: 16) {
+                            Image(systemName: "camera.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                                .frame(width: 24)
+                            
+                            Text("Take Photo")
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                    }
+                    .background(Color.white)
+                    
+                    Divider()
+                        .padding(.leading, 64)
+                    
+                    // Photo Library option
+                    Button(action: {
+                        imagePickerSourceType = .photoLibrary
+                        showImagePicker = true
+                        dismiss()
+                    }) {
+                        HStack(spacing: 16) {
+                            Image(systemName: "photo.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                                .frame(width: 24)
+                            
+                            Text("Choose from Library")
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                    }
+                    .background(Color.white)
+                    
+                    // Remove photo option (only show if user has a profile picture)
+                    if hasProfilePicture {
+                        Divider()
+                            .padding(.leading, 64)
+                        
+                        Button(action: {
+                            Task {
+                                await authManager.removeProfilePicture()
+                                dismiss()
+                            }
+                        }) {
+                            HStack(spacing: 16) {
+                                Image(systemName: "trash.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.red)
+                                    .frame(width: 24)
+                                
+                                Text("Remove Photo")
+                                    .font(.body)
+                                    .foregroundColor(.red)
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 16)
+                        }
+                        .background(Color.white)
+                    }
+                }
+                
+                Spacer()
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationBarHidden(true)
+        }
+        .presentationDetents([.height(280)])
+        .presentationDragIndicator(.hidden)
+    }
+}
+
+
+
+struct GridLines: View {
+    var body: some View {
+        ZStack {
+            // Vertical lines
+            ForEach(1..<3) { i in
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(width: 1)
+                    .frame(maxWidth: .infinity)
+                    .offset(x: CGFloat(i) * 93.33 - 140) // Divide 280 by 3
+            }
+            
+            // Horizontal lines
+            ForEach(1..<3) { i in
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity)
+                    .offset(y: CGFloat(i) * 93.33 - 140) // Divide 280 by 3
+            }
+        }
+        .frame(width: 280, height: 280)
+        .allowsHitTesting(false)
     }
 }

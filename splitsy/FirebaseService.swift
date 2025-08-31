@@ -2,6 +2,7 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseCore
+import FirebaseStorage
 import AuthenticationServices
 import GoogleSignIn
 
@@ -10,6 +11,7 @@ class FirebaseService: ObservableObject {
     
     let auth = Auth.auth()
     private let db = Firestore.firestore()
+    private let storage = Storage.storage()
     
     @Published var currentUser: User?
     @Published var isAuthenticated = false
@@ -159,6 +161,7 @@ class FirebaseService: ObservableObject {
                 username: username ?? currentUser.username,
                 createdAt: currentUser.createdAt,
                 usernameLastChanged: username != currentUser.username ? Date() : currentUser.usernameLastChanged,
+                profilePictureURL: currentUser.profilePictureURL,
                 assignedItemIDs: currentUser.assignedItemIDs
             )
             
@@ -585,7 +588,8 @@ class FirebaseService: ObservableObject {
                         name: userData["name"] as? String ?? "",
                         username: userData["username"] as? String ?? "",
                         createdAt: (userData["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        usernameLastChanged: (userData["usernameLastChanged"] as? Timestamp)?.dateValue()
+                        usernameLastChanged: (userData["usernameLastChanged"] as? Timestamp)?.dateValue(),
+                        profilePictureURL: userData["profilePictureURL"] as? String
                     )
                     
                     DispatchQueue.main.async {
@@ -627,6 +631,10 @@ class FirebaseService: ObservableObject {
             data["usernameLastChanged"] = Timestamp(date: usernameLastChanged)
         }
         
+        if let profilePictureURL = user.profilePictureURL {
+            data["profilePictureURL"] = profilePictureURL
+        }
+        
         try await db.collection("users").document(user.id).setData(data)
     }
     
@@ -664,6 +672,170 @@ class FirebaseService: ObservableObject {
             }
         default:
             return error.localizedDescription
+        }
+    }
+    
+    // MARK: - Profile Picture Methods
+    
+    func uploadProfilePicture(_ image: UIImage) async {
+        print("🔥 FirebaseService: Starting profile picture upload")
+        
+        guard let currentUser = self.currentUser else {
+            print("❌ FirebaseService: No current user found")
+            return
+        }
+        
+        print("✅ FirebaseService: Current user found - \(currentUser.id)")
+        print("✅ FirebaseService: User authenticated - \(auth.currentUser?.uid ?? "No Firebase Auth user")")
+        
+        DispatchQueue.main.async {
+            self.isLoading = true
+            self.errorMessage = nil
+        }
+        
+        do {
+            // Convert image to JPEG data
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                print("❌ FirebaseService: Failed to convert image to JPEG data")
+                throw NSError(domain: "FirebaseService", code: 8, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to data"])
+            }
+            
+            print("✅ FirebaseService: Image converted to JPEG data - \(imageData.count) bytes")
+            
+            // Create storage reference
+            let storageRef = storage.reference().child("profile_pictures/\(currentUser.id).jpg")
+            print("✅ FirebaseService: Storage reference created - \(storageRef.fullPath)")
+            
+            // Upload image data
+            let metadata = StorageMetadata()
+            metadata.contentType = "image/jpeg"
+            
+            print("🔥 FirebaseService: Starting upload to Firebase Storage...")
+            let uploadResult = try await storageRef.putDataAsync(imageData, metadata: metadata)
+            print("✅ FirebaseService: Image uploaded successfully to Firebase Storage")
+            
+            // Get download URL with retry logic
+            var downloadURL: URL?
+            var retryCount = 0
+            let maxRetries = 3
+            
+            while downloadURL == nil && retryCount < maxRetries {
+                do {
+                    downloadURL = try await storageRef.downloadURL()
+                    print("✅ FirebaseService: Download URL obtained on attempt \(retryCount + 1) - \(downloadURL?.absoluteString ?? "nil")")
+                } catch {
+                    retryCount += 1
+                    print("⚠️ FirebaseService: Failed to get download URL on attempt \(retryCount), error: \(error.localizedDescription)")
+                    if retryCount < maxRetries {
+                        // Wait before retrying
+                        try await Task.sleep(nanoseconds: UInt64(500_000_000 * retryCount)) // 0.5s, 1s, 1.5s
+                    }
+                }
+            }
+            
+            guard let finalDownloadURL = downloadURL else {
+                throw NSError(domain: "FirebaseService", code: 9, userInfo: [NSLocalizedDescriptionKey: "Failed to get download URL after \(maxRetries) attempts"])
+            }
+            
+            // Update user profile in Firestore
+            print("🔥 FirebaseService: Updating Firestore user document...")
+            try await db.collection("users").document(currentUser.id).updateData([
+                "profilePictureURL": finalDownloadURL.absoluteString
+            ])
+            print("✅ FirebaseService: Firestore user document updated successfully")
+            
+            // Update local user object
+            let updatedUser = User(
+                id: currentUser.id,
+                email: currentUser.email,
+                name: currentUser.name,
+                username: currentUser.username,
+                createdAt: currentUser.createdAt,
+                usernameLastChanged: currentUser.usernameLastChanged,
+                profilePictureURL: finalDownloadURL.absoluteString,
+                assignedItemIDs: currentUser.assignedItemIDs
+            )
+            
+            DispatchQueue.main.async {
+                self.currentUser = updatedUser
+                self.isLoading = false
+                print("✅ FirebaseService: Local user object updated, upload complete")
+            }
+            
+        } catch {
+            print("❌ FirebaseService: Upload failed with error - \(error.localizedDescription)")
+            print("❌ FirebaseService: Error details - \(error)")
+            
+            // Check if it's a Firebase Storage security rules error
+            if let nsError = error as NSError? {
+                print("❌ FirebaseService: Error domain - \(nsError.domain)")
+                print("❌ FirebaseService: Error code - \(nsError.code)")
+                print("❌ FirebaseService: Error user info - \(nsError.userInfo)")
+            }
+            
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to upload profile picture: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+        }
+    }
+    
+    func removeProfilePicture() async {
+        print("🔥 FirebaseService: Starting profile picture removal")
+        
+        guard let currentUser = self.currentUser else {
+            print("❌ FirebaseService: No current user found")
+            return
+        }
+        
+        print("✅ FirebaseService: Current user found - \(currentUser.id)")
+        
+        DispatchQueue.main.async {
+            self.isLoading = true
+            self.errorMessage = nil
+        }
+        
+        do {
+            // Delete the image from Firebase Storage
+            let storageRef = storage.reference().child("profile_pictures/\(currentUser.id).jpg")
+            print("🔥 FirebaseService: Deleting from Firebase Storage - \(storageRef.fullPath)")
+            
+            try await storageRef.delete()
+            print("✅ FirebaseService: Image deleted from Firebase Storage successfully")
+            
+            // Update user profile in Firestore to remove the URL
+            print("🔥 FirebaseService: Updating Firestore user document...")
+            try await db.collection("users").document(currentUser.id).updateData([
+                "profilePictureURL": FieldValue.delete()
+            ])
+            print("✅ FirebaseService: Firestore user document updated successfully")
+            
+            // Update local user object
+            let updatedUser = User(
+                id: currentUser.id,
+                email: currentUser.email,
+                name: currentUser.name,
+                username: currentUser.username,
+                createdAt: currentUser.createdAt,
+                usernameLastChanged: currentUser.usernameLastChanged,
+                profilePictureURL: nil,
+                assignedItemIDs: currentUser.assignedItemIDs
+            )
+            
+            DispatchQueue.main.async {
+                self.currentUser = updatedUser
+                self.isLoading = false
+                print("✅ FirebaseService: Local user object updated, removal complete")
+            }
+            
+        } catch {
+            print("❌ FirebaseService: Removal failed with error - \(error.localizedDescription)")
+            print("❌ FirebaseService: Error details - \(error)")
+            
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to remove profile picture: \(error.localizedDescription)"
+                self.isLoading = false
+            }
         }
     }
 }

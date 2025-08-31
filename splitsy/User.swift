@@ -7,10 +7,11 @@ struct User: Identifiable, Codable {
     var username: String
     let createdAt: Date
     var usernameLastChanged: Date?
+    var profilePictureURL: String?
     var assignedItemIDs: [UUID] = [] // List of ReceiptItem IDs
     
     enum CodingKeys: String, CodingKey {
-        case id, email, name, username, createdAt, usernameLastChanged, assignedItemIDs
+        case id, email, name, username, createdAt, usernameLastChanged, profilePictureURL, assignedItemIDs
     }
     
     // Check if username can be changed (7 days since last change)

@@ -11,6 +11,7 @@
 		D30C62E82E4FC95300C7FA38 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = D30C62E72E4FC95300C7FA38 /* FirebaseFirestore */; };
 		D30C62F52E4FD4ED00C7FA38 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = D30C62F42E4FD4ED00C7FA38 /* GoogleSignIn */; };
 		D30C62F72E4FD4ED00C7FA38 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D30C62F62E4FD4ED00C7FA38 /* GoogleSignInSwift */; };
+		D38584B12E63C96100BC7F68 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = D38584B02E63C96100BC7F68 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,6 +76,7 @@
 				D30C62E62E4FC95300C7FA38 /* FirebaseAuth in Frameworks */,
 				D30C62E82E4FC95300C7FA38 /* FirebaseFirestore in Frameworks */,
 				D30C62F52E4FD4ED00C7FA38 /* GoogleSignIn in Frameworks */,
+				D38584B12E63C96100BC7F68 /* FirebaseStorage in Frameworks */,
 				D30C62F72E4FD4ED00C7FA38 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -140,6 +142,7 @@
 				D30C62E72E4FC95300C7FA38 /* FirebaseFirestore */,
 				D30C62F42E4FD4ED00C7FA38 /* GoogleSignIn */,
 				D30C62F62E4FD4ED00C7FA38 /* GoogleSignInSwift */,
+				D38584B02E63C96100BC7F68 /* FirebaseStorage */,
 			);
 			productName = splitsy;
 			productReference = D3D10A5A2CDDB75E00252FA8 /* splitsy.app */;
@@ -433,12 +436,15 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(SRCROOT)/splitsy/Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera to scan receipts.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library to scan saved receipt images.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need continuous access to your location for better recommendations.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to find nearby stores.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We need permission to save split exports to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library to scan receipts.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -466,12 +472,15 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(SRCROOT)/splitsy/Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera to scan receipts.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library to scan saved receipt images.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need continuous access to your location for better recommendations.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to find nearby stores.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We need permission to save split exports to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library to scan receipts.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -634,6 +643,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D30C62F32E4FD4ED00C7FA38 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		D38584B02E63C96100BC7F68 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D30C62E42E4FC95300C7FA38 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
