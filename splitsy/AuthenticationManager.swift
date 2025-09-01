@@ -112,6 +112,10 @@ class AuthenticationManager: ObservableObject {
         print("🔐 AuthenticationManager: Profile picture removal completed")
     }
     
+    func isEmailVerified() -> Bool {
+        return firebaseService.auth.currentUser?.isEmailVerified == true
+    }
+    
     func signIn(email: String, password: String) {
         Task {
             await firebaseService.signIn(email: email, password: password)

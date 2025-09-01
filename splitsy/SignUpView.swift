@@ -173,6 +173,7 @@ struct SignUpView: View {
                     }
                 }
             }
+            .preferredColorScheme(.light)
             .fullScreenCover(isPresented: $showUsernameSetup) {
                 UsernameSetupView(email: email, password: password)
                     .environmentObject(authManager)

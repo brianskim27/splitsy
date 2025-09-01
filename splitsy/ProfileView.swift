@@ -28,8 +28,7 @@ struct ProfileView: View {
                 // Account & Settings
                 accountSettings
                 
-                // App Features
-                appFeatures
+
                 
                 // Support & Help
                 supportSection
@@ -269,34 +268,7 @@ struct ProfileView: View {
         }
     }
     
-    // MARK: - App Features
-    private var appFeatures: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("App Features")
-                .font(.headline)
-                .bold()
-            
-            VStack(spacing: 8) {
-                ProfileButton(
-                    title: "Split Templates",
-                    subtitle: "Save and reuse common splits",
-                    icon: "doc.on.doc",
-                    color: .green
-                ) {
-                    // TODO: Implement split templates
-                }
-                
-                ProfileButton(
-                    title: "Favorite Contacts",
-                    subtitle: "Manage your frequent split partners",
-                    icon: "star.fill",
-                    color: .yellow
-                ) {
-                    // TODO: Implement favorite contacts
-                }
-            }
-        }
-    }
+
     
     // MARK: - Support Section
     private var supportSection: some View {
@@ -806,22 +778,106 @@ struct EditProfileView: View {
 }
 
 struct AccountSettingsView: View {
+    @EnvironmentObject var authManager: AuthenticationManager
     @Environment(\.dismiss) private var dismiss
+    @State private var showDeleteAccountAlert = false
+    @State private var showPasswordResetAlert = false
+    
+    private var emailVerificationSubtitle: String {
+        authManager.isEmailVerified() ? "Email verified" : "Email not verified"
+    }
+    
+    private var emailVerificationColor: Color {
+        authManager.isEmailVerified() ? .green : .orange
+    }
+    
+    private var isEmailVerified: Bool {
+        authManager.isEmailVerified()
+    }
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                Text("Account Settings")
-                    .font(.title)
-                    .bold()
-                
-                Text("Account settings coming soon!")
-                    .foregroundColor(.secondary)
-                
-                Spacer()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Account Information Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Account Information")
+                            .font(.headline)
+                            .bold()
+                        
+                        VStack(spacing: 12) {
+                            InfoRow(title: "Email", value: authManager.currentUser?.email ?? "N/A")
+                            InfoRow(title: "Username", value: "@\(authManager.currentUser?.username ?? "N/A")")
+                            InfoRow(title: "Display Name", value: authManager.currentUser?.name ?? "N/A")
+                            InfoRow(title: "Member Since", value: formatDate(authManager.currentUser?.createdAt))
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                    
+                    // Security Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Security")
+                            .font(.headline)
+                            .bold()
+                        
+                        VStack(spacing: 8) {
+                            SettingsButton(
+                                title: "Reset Password",
+                                subtitle: "Send password reset email",
+                                icon: "lock.rotation",
+                                color: .blue
+                            ) {
+                                showPasswordResetAlert = true
+                            }
+                            
+                            SettingsButton(
+                                title: "Email Verification",
+                                subtitle: emailVerificationSubtitle,
+                                icon: "checkmark.shield",
+                                color: emailVerificationColor
+                            ) {
+                                if !isEmailVerified {
+                                    authManager.sendEmailVerification()
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Data Management Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Data Management")
+                            .font(.headline)
+                            .bold()
+                        
+                        VStack(spacing: 8) {
+                            SettingsButton(
+                                title: "Export Data",
+                                subtitle: "Download your split history",
+                                icon: "square.and.arrow.up",
+                                color: .purple
+                            ) {
+                                // TODO: Implement data export
+                            }
+                            
+                            SettingsButton(
+                                title: "Delete Account",
+                                subtitle: "Permanently delete your account and data",
+                                icon: "trash",
+                                color: .red
+                            ) {
+                                showDeleteAccountAlert = true
+                            }
+                        }
+                    }
+                    
+                    Spacer(minLength: 50)
+                }
+                .padding()
             }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Account Settings")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
@@ -829,7 +885,91 @@ struct AccountSettingsView: View {
                     }
                 }
             }
+            .alert("Reset Password", isPresented: $showPasswordResetAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Send Reset Email") {
+                    if let email = authManager.currentUser?.email {
+                        authManager.resetPassword(email: email)
+                    }
+                }
+            } message: {
+                Text("We'll send a password reset link to your email address.")
+            }
+            .alert("Delete Account", isPresented: $showDeleteAccountAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    // TODO: Implement account deletion
+                }
+            } message: {
+                Text("This action cannot be undone. All your data will be permanently deleted.")
+            }
         }
+    }
+    
+    private func formatDate(_ date: Date?) -> String {
+        guard let date = date else { return "N/A" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+}
+
+struct InfoRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Spacer()
+            
+            Text(value)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+        }
+    }
+}
+
+struct SettingsButton: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(color)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

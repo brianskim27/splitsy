@@ -152,6 +152,7 @@ struct UsernameSetupView: View {
             }
         }
         .navigationBarHidden(true)
+        .preferredColorScheme(.light)
     }
     
     private var isFormValid: Bool {

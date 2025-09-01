@@ -16,27 +16,25 @@ struct LoginView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background gradient
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.blue.opacity(0.1), Color.cyan.opacity(0.1)]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Background
+                Color.white
+                    .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 32) {
                         // Logo and title
                         VStack(spacing: 16) {
-                            Image(systemName: "chart.pie.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.blue)
+                            Image("app_logo")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 80, height: 80)
+                                .cornerRadius(16)
                             
                             Text("Splitsy")
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                             
-                            Text("Split bills because time is money")
+                            Text("Snap, split, done")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -211,6 +209,7 @@ struct LoginView: View {
             }
             .navigationBarHidden(true)
         }
+        .preferredColorScheme(.light)
         .sheet(isPresented: $showSignUp) {
             SignUpView()
                 .environmentObject(authManager)
@@ -310,6 +309,7 @@ struct ForgotPasswordView: View {
                     }
                 }
             }
+            .preferredColorScheme(.light)
         }
     }
     
