@@ -36,6 +36,19 @@ struct SplitsyApp: App {
 
 struct LoadingView: View {
     var body: some View {
-        AnimatedLoadingViewFallback()
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                gradient: Gradient(colors: [Color.blue, Color.cyan]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            Image("app_logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 200, height: 200)
+        }
     }
 }
