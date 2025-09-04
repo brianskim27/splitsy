@@ -16,7 +16,7 @@ struct ItemAssignmentView: View {
     @FocusState private var isEditingNameFocused: Bool
     @State private var keyboardHeight: CGFloat = 0
 
-        var body: some View {
+    var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
@@ -128,6 +128,15 @@ struct ItemAssignmentView: View {
                                                         Text("$\(item.cost / Double(item.assignedUsers.count), specifier: "%.2f")")
                                                             .font(.caption)
                                                             .foregroundColor(.green)
+                                                        
+                                                        Button(action: {
+                                                            removeItemFromUser(itemId: item.id, userId: user.id)
+                                                        }) {
+                                                            Image(systemName: "xmark.circle.fill")
+                                                                .font(.system(size: 12))
+                                                                .foregroundColor(.red)
+                                                        }
+                                                        .accessibilityLabel("Remove \(item.name) from \(user.name)")
                                                     }
                                                 }
                                             }
@@ -148,30 +157,38 @@ struct ItemAssignmentView: View {
                         }
                     }
 
-                    // Items Section  
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Items")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        if items.isEmpty {
-                            Text("No items to assign")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(8)
-                        } else {
-                            ForEach(items) { item in
-                                ItemAssignmentRow(
-                                    item: item,
-                                    users: $users,
-                                    items: $items,
-                                    onAssignmentChange: { }
-                                )
+                    // Items Section - Modern Wheel Design
+                    if !items.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Header
+                            HStack {
+                                Text("Items to Assign")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text("\(items.count) item\(items.count == 1 ? "" : "s")")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 0)
+                            .padding(.bottom, 16)
+                            
+                            // Horizontal Scrollable Items Wheel
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(items) { item in
+                                        ItemAssignmentCard(
+                                            item: item,
+                                            users: $users,
+                                            items: $items,
+                                            onAssignmentChange: { }
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal, 0)
                             }
                         }
+                        .padding(.bottom, 20)
                     }
 
                     // Tip Section
@@ -440,6 +457,25 @@ struct ItemAssignmentView: View {
             users.remove(at: userIndex)
         }
     }
+    
+    // Remove specific item from specific user
+    private func removeItemFromUser(itemId: UUID, userId: String) {
+        // Find the user and item
+        guard let userIndex = users.firstIndex(where: { $0.id == userId }),
+              let itemIndex = items.firstIndex(where: { $0.id == itemId }) else { return }
+        
+        let user = users[userIndex]
+        
+        // Remove the user from the item's assigned users
+        if let userIndexInItem = items[itemIndex].assignedUsers.firstIndex(of: user.name) {
+            items[itemIndex].assignedUsers.remove(at: userIndexInItem)
+        }
+        
+        // Remove the item from the user's assigned items
+        if let itemIndexInUser = users[userIndex].assignedItemIDs.firstIndex(of: itemId) {
+            users[userIndex].assignedItemIDs.remove(at: itemIndexInUser)
+        }
+    }
 
     // Calculate User Shares
     private func calculateUserShares() -> ([String: Double], [String: [ItemDetail]]) {
@@ -579,6 +615,143 @@ struct ItemAssignmentRow: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+    
+    private func toggleAssignment(for user: User) {
+        // Find the item in the items array
+        guard let itemIndex = items.firstIndex(where: { $0.id == item.id }),
+              let userIndex = users.firstIndex(where: { $0.id == user.id }) else { return }
+        
+        let isCurrentlyAssigned = items[itemIndex].assignedUsers.contains(user.name)
+        
+        if isCurrentlyAssigned {
+            // Remove assignment
+            if let assignedUserIndex = items[itemIndex].assignedUsers.firstIndex(of: user.name) {
+                items[itemIndex].assignedUsers.remove(at: assignedUserIndex)
+            }
+            if let assignedItemIndex = users[userIndex].assignedItemIDs.firstIndex(of: item.id) {
+                users[userIndex].assignedItemIDs.remove(at: assignedItemIndex)
+            }
+        } else {
+            // Add assignment
+            items[itemIndex].assignedUsers.append(user.name)
+            users[userIndex].assignedItemIDs.append(item.id)
+        }
+        
+        onAssignmentChange()
+    }
+}
+
+// MARK: - ItemAssignmentCard (Modern Wheel Design)
+struct ItemAssignmentCard: View {
+    let item: ReceiptItem
+    @Binding var users: [User]
+    @Binding var items: [ReceiptItem]
+    let onAssignmentChange: () -> Void
+    @State private var showAssignments = false
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Item Card
+            VStack(spacing: 8) {
+                // Item Info
+                VStack(spacing: 6) {
+                    Text(item.name)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .frame(height: 32)
+                    
+                    Text("$\(item.cost, specifier: "%.2f")")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.green)
+                }
+                
+                // Assignment Status
+                if !item.assignedUsers.isEmpty {
+                    Text("\(item.assignedUsers.count) assigned")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                }
+            }
+            .frame(width: 120, height: 80)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6).opacity(0.6))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
+            
+            // Action Button
+            Button(action: {
+                showAssignments.toggle()
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: showAssignments ? "checkmark.circle.fill" : "person.badge.plus")
+                        .font(.system(size: 12, weight: .medium))
+                    Text(showAssignments ? "Done" : "Assign")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .foregroundColor(.blue)
+                .frame(width: 80, height: 28)
+                .background(Color.blue.opacity(0.15))
+                .cornerRadius(14)
+            }
+            
+            // Assignment Panel (appears below when expanded)
+            if showAssignments {
+                VStack(spacing: 8) {
+                    Text("Assign to:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fontWeight(.medium)
+                    
+                    ForEach(users.indices, id: \.self) { index in
+                        let user = users[index]
+                        let isAssigned = item.assignedUsers.contains(user.name)
+                        
+                        Button(action: {
+                            toggleAssignment(for: user)
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: isAssigned ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(isAssigned ? .blue : .gray)
+                                
+                                Text(user.name)
+                                    .font(.caption)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                isAssigned 
+                                ? Color.blue.opacity(0.1) 
+                                : Color(.systemGray6)
+                            )
+                            .cornerRadius(8)
+                        }
+                        .frame(width: 100)
+                    }
+                }
+                .padding(.top, 8)
+                .transition(.opacity.combined(with: .scale))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showAssignments)
     }
     
     private func toggleAssignment(for user: User) {

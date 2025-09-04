@@ -14,22 +14,23 @@ struct ReceiptInputView: View {
     @State private var editingItemId: UUID? = nil
     @State private var editingItemName: String = ""
     @State private var editingItemPrice: String = ""
+    @State private var keyboardHeight: CGFloat = 0
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
+            VStack(spacing: 0) {
                 // Receipt Image Display
                 ZStack {
                     if let receiptImage {
                         Image(uiImage: receiptImage)
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 280)
+                            .frame(maxHeight: 400)
                             .background(Color(.systemBackground))
-                            .cornerRadius(18)
-                            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
+                            .cornerRadius(20)
+                            .shadow(color: Color.black.opacity(0.12), radius: 15, x: 0, y: 6)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 18)
+                                RoundedRectangle(cornerRadius: 20)
                                     .stroke(Color(.systemGray4), lineWidth: 1)
                             )
                             .onTapGesture { showFullScreenImage = true }
@@ -50,8 +51,8 @@ struct ReceiptInputView: View {
                             }
                     } else {
                         Color.secondary.opacity(0.08)
-                            .frame(height: 220)
-                            .cornerRadius(18)
+                            .frame(height: 300)
+                            .cornerRadius(20)
                             .overlay(
                                 VStack(spacing: 24) {
                                     Text("Analyze")
@@ -90,96 +91,152 @@ struct ReceiptInputView: View {
                             )
                     }
                 }
-                .padding(.horizontal, 32)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                
+                Spacer()
 
-                // Parsed Items List
+                // Items Wheel at Bottom
                 if !parsedItems.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Items")
-                            .font(.headline)
-                            .padding(.horizontal)
-                            .padding(.top, 8)
-                        ScrollView {
-                            VStack(spacing: 0) {
-                        ForEach(parsedItems, id: \.id) { item in
-                            HStack {
-                                        if editingItemId == item.id {
-                                            VStack(spacing: 8) {
-                                                TextField("Item Name", text: $editingItemName, onCommit: {
-                                                    saveItemEdits(id: item.id)
-                                                })
-                                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                                .font(.body.bold())
-                                                
-                                                HStack {
-                                                    Text("$")
-                                                        .foregroundColor(.green)
-                                                        .font(.subheadline)
-                                                        .bold()
-                                                    TextField("0.00", text: $editingItemPrice, onCommit: {
+                    VStack(spacing: 0) {
+                        // Header
+                        HStack {
+                            Text("Items")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text("\(parsedItems.count) item\(parsedItems.count == 1 ? "" : "s")")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
+                        
+                        // Horizontal Scrollable Items
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                ForEach(parsedItems, id: \.id) { item in
+                                    VStack(spacing: 12) {
+                                        // Item Card
+                                        VStack(spacing: 8) {
+                                            if editingItemId == item.id {
+                                                // Editing Mode
+                                                VStack(spacing: 6) {
+                                                    TextField("Item Name", text: $editingItemName, onCommit: {
                                                         saveItemEdits(id: item.id)
                                                     })
                                                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                                                    .keyboardType(.decimalPad)
-                                                    .font(.subheadline)
-                                                    .bold()
+                                                    .font(.caption)
+                                                    .multilineTextAlignment(.center)
+                                                    
+                                                    HStack(spacing: 2) {
+                                                        Text("$")
+                                                            .foregroundColor(.green)
+                                                            .font(.caption)
+                                                            .fontWeight(.medium)
+                                                        TextField("0.00", text: $editingItemPrice, onCommit: {
+                                                            saveItemEdits(id: item.id)
+                                                        })
+                                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                                        .keyboardType(.decimalPad)
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .multilineTextAlignment(.center)
+                                                    }
+                                                }
+                                            } else {
+                                                // Display Mode
+                                                VStack(spacing: 6) {
+                                                    Text(item.name)
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.primary)
+                                                        .lineLimit(2)
+                                                        .multilineTextAlignment(.center)
+                                                        .frame(height: 32)
+                                                    
+                                                    Text("$\(item.cost, specifier: "%.2f")")
+                                                        .font(.title3)
+                                                        .fontWeight(.bold)
+                                                        .foregroundColor(.green)
                                                 }
                                             }
-                                            .frame(minWidth: 80, maxWidth: 180)
-                                        } else {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(item.name)
-                                                    .font(.body)
-                                                    .bold()
-                                                    .multilineTextAlignment(.leading)
+                                        }
+                                        .frame(width: 120, height: 80)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color(.systemGray6).opacity(0.6))
+                                        .cornerRadius(16)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(Color(.systemGray4), lineWidth: 1)
+                                        )
+                                        
+                                        // Action Buttons - Always visible
+                                        HStack(spacing: 8) {
+                                            if editingItemId == item.id {
+                                                // Save and Cancel buttons when editing
+                                                Button(action: {
+                                                    saveItemEdits(id: item.id)
+                                                }) {
+                                                    Image(systemName: "checkmark")
+                                                        .font(.system(size: 12, weight: .medium))
+                                                        .foregroundColor(.green)
+                                                        .frame(width: 24, height: 24)
+                                                        .background(Color.green.opacity(0.15))
+                                                        .clipShape(Circle())
+                                                }
                                                 
-                                                Text("$\(item.cost, specifier: "%.2f")")
-                                                    .foregroundColor(.green)
-                                                    .font(.subheadline)
-                                                    .bold()
+                                                Button(action: {
+                                                    editingItemId = nil
+                                                    editingItemName = ""
+                                                    editingItemPrice = ""
+                                                }) {
+                                                    Image(systemName: "xmark")
+                                                        .font(.system(size: 12, weight: .medium))
+                                                        .foregroundColor(.red)
+                                                        .frame(width: 24, height: 24)
+                                                        .background(Color.red.opacity(0.15))
+                                                        .clipShape(Circle())
+                                                }
+                                            } else {
+                                                // Edit and Delete buttons when not editing
+                                                Button(action: {
+                                                    editingItemId = item.id
+                                                    editingItemName = item.name
+                                                    editingItemPrice = String(format: "%.2f", item.cost)
+                                                }) {
+                                                    Image(systemName: "pencil")
+                                                        .font(.system(size: 12, weight: .medium))
+                                                        .foregroundColor(.blue)
+                                                        .frame(width: 24, height: 24)
+                                                        .background(Color.blue.opacity(0.15))
+                                                        .clipShape(Circle())
+                                                }
+                                                
+                                                Button(action: { removeItemById(item.id) }) {
+                                                    Image(systemName: "trash")
+                                                        .font(.system(size: 12, weight: .medium))
+                                                        .foregroundColor(.red)
+                                                        .frame(width: 24, height: 24)
+                                                        .background(Color.red.opacity(0.15))
+                                                        .clipShape(Circle())
+                                                }
+                                                .accessibilityLabel("Delete item")
                                             }
                                         }
-                                Spacer()
-                                if editingItemId != item.id {
-                                    Text("$\(item.cost, specifier: "%.2f")")
-                                        .foregroundColor(.green)
-                                        .font(.subheadline)
-                                        .bold()
-                                        .padding(.trailing, 8)
-                                }
-                                Button(action: {
-                                    editingItemId = item.id
-                                    editingItemName = item.name
-                                    editingItemPrice = String(format: "%.2f", item.cost)
-                                }) {
-                                            Image(systemName: "pencil")
-                                                .foregroundColor(.blue)
-                                        }
-                                        .padding(.trailing, 8)
-                                        Button(action: { removeItemById(item.id) }) {
-                                            Image(systemName: "trash")
-                                                .foregroundColor(.red)
-                                        }
-                                        .accessibilityLabel("Delete item")
                                     }
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(12)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 4)
                                 }
                             }
+                            .padding(.horizontal, 20)
                         }
-                        .frame(maxHeight: 360)
                     }
-                    .background(Color(.systemBackground))
-                    .cornerRadius(18)
-                    .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
                 }
 
                 Spacer()
+                    .frame(height: max(0, keyboardHeight > 0 ? 20 : 0))
 
                 // Next Button
                 Button(action: {
@@ -237,6 +294,30 @@ struct ReceiptInputView: View {
             if let image = receiptImage, parsedItems.isEmpty {
                 analyzeReceiptImage(image)
             }
+            
+            // Keyboard observers
+            NotificationCenter.default.addObserver(
+                forName: UIResponder.keyboardWillShowNotification,
+                object: nil,
+                queue: .main
+            ) { notification in
+                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    keyboardHeight = keyboardFrame.height
+                }
+            }
+            
+            NotificationCenter.default.addObserver(
+                forName: UIResponder.keyboardWillHideNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                keyboardHeight = 0
+            }
+        }
+        .onDisappear {
+            // Remove keyboard observers
+            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
         .onChange(of: receiptImage) { oldValue, newValue in
             if let image = newValue, newValue != oldValue {
@@ -244,6 +325,8 @@ struct ReceiptInputView: View {
                 analyzeReceiptImage(image)
             }
         }
+        .padding(.bottom, keyboardHeight)
+        .animation(.easeInOut(duration: 0.3), value: keyboardHeight)
     }
     
     // Next button enabled only if there are parsed items
