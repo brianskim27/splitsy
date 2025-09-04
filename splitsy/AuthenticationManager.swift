@@ -18,6 +18,9 @@ class AuthenticationManager: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    // Callback for when user signs out
+    var onSignOut: (() -> Void)?
+    
     private func checkInitialAuthState() {
         // Check if there's a current user in Firebase Auth directly
         if firebaseService.auth.currentUser != nil {
@@ -131,6 +134,10 @@ class AuthenticationManager: ObservableObject {
     func signOut() {
         Task {
             await firebaseService.signOut()
+            // Call the sign out callback to clear user data
+            DispatchQueue.main.async {
+                self.onSignOut?()
+            }
         }
     }
     

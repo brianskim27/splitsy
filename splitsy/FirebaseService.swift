@@ -490,6 +490,18 @@ class FirebaseService: ObservableObject {
             
             // Save new splits
             for split in splits {
+                // Compress receipt image if it exists
+                var compressedImageData: Data?
+                if let receiptImageData = split.receiptImageData {
+                    // Convert Data back to UIImage for compression
+                    if let receiptImage = UIImage(data: receiptImageData) {
+                        compressedImageData = compressImage(receiptImage, maxSize: 500 * 1024) // 500KB limit
+                    }
+                }
+                
+                // Only store image data if it's under the limit
+                let imageDataString = compressedImageData?.base64EncodedString() ?? ""
+                
                 try await splitsRef.document(split.id.uuidString).setData([
                     "id": split.id.uuidString,
                     "description": split.description ?? "",
@@ -502,7 +514,7 @@ class FirebaseService: ObservableObject {
                             "cost": $0.cost
                         ] }
                     },
-                    "receiptImageData": split.receiptImageData?.base64EncodedString() ?? ""
+                    "receiptImageData": imageDataString
                 ])
             }
         } catch {
@@ -510,6 +522,19 @@ class FirebaseService: ObservableObject {
                 self.errorMessage = "Failed to sync splits: \(error.localizedDescription)"
             }
         }
+    }
+    
+    private func compressImage(_ image: UIImage, maxSize: Int) -> Data? {
+        var compression: CGFloat = 1.0
+        var imageData = image.jpegData(compressionQuality: compression)
+        
+        // Reduce quality until image is under maxSize
+        while let data = imageData, data.count > maxSize && compression > 0.1 {
+            compression -= 0.1
+            imageData = image.jpegData(compressionQuality: compression)
+        }
+        
+        return imageData
     }
     
     func loadSplits() async -> [Split] {

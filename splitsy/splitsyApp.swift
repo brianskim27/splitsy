@@ -23,6 +23,10 @@ struct SplitsyApp: App {
                             .environmentObject(authManager)
                             .onAppear {
                                 splitHistoryManager.setAuthManager(authManager)
+                                // Set up callback to clear data when user signs out
+                                authManager.onSignOut = {
+                                    splitHistoryManager.clearData()
+                                }
                             }
                     }
                     .preferredColorScheme(.light)

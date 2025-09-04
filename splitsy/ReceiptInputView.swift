@@ -253,9 +253,6 @@ struct ReceiptInputView: View {
             DispatchQueue.main.async {
                 self.detectedTexts = detectedTexts
                 self.parsedItems = groupItemsAndPrices(detectedTexts: detectedTexts.map { ($0.text, $0.box) })
-                for (i, t) in detectedTexts.enumerated() {
-                    print("\(i): \(t.text)")
-                }
             }
         }
         request.recognitionLevel = .accurate
@@ -274,7 +271,6 @@ struct ReceiptInputView: View {
     private func groupItemsAndPrices(detectedTexts: [(text: String, box: CGRect)]) -> [ReceiptItem] {
         let allText = detectedTexts.map { $0.text }.joined(separator: " ").lowercased()
         if allText.contains("walmart") {
-            print("Walmart")
             return parseWalmartReceipt(detectedTexts)
         } else if allText.contains("bj's") || allText.contains("bjs") {
             return parseBJsReceipt(detectedTexts)

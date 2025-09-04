@@ -217,6 +217,11 @@ struct ItemAssignmentView: View {
                                         .bold()
                                         .foregroundColor(.blue)
                                 }
+                                
+                                Text("Tip will be split evenly among all people")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
                             }
                         }
                     }
@@ -448,7 +453,7 @@ struct ItemAssignmentView: View {
             
             // Add tip portion if tip is enabled
             if isTipEnabled && tipAmountDouble > 0 {
-                let userTipShare = userTotal * (tipAmountDouble / assignedSubtotal)
+                let userTipShare = tipAmountDouble / Double(users.count)
                 userTotal += userTipShare
                 userItems.append(ItemDetail(item: "Tip (\(String(format: "%.1f", tipPercentage))%)", cost: userTipShare))
             }
