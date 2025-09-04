@@ -30,6 +30,9 @@ struct SplitsyApp: App {
                             }
                     }
                     .preferredColorScheme(.light)
+                case .needsUsernameSetup:
+                    GoogleUsernameSetupView()
+                        .environmentObject(authManager)
                 case .loading:
                     LoadingView()
                 }

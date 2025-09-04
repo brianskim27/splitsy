@@ -12,8 +12,8 @@ struct UsernameSetupView: View {
     @State private var usernameAvailable = false
     @State private var showUsernameTaken = false
     
-    let email: String
-    let password: String
+    let email: String?
+    let password: String?
     
     var body: some View {
         NavigationView {
@@ -37,15 +37,17 @@ struct UsernameSetupView: View {
                 
                 // Form
                 VStack(spacing: 20) {
-                    // Display Name
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Display Name")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        TextField("Enter your display name", text: $name)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .autocapitalization(.words)
+                    // Display Name (only show for manual signup)
+                    if email != nil {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Display Name")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            TextField("Enter your display name", text: $name)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .autocapitalization(.words)
+                        }
                     }
                     
                     // Username
@@ -129,7 +131,7 @@ struct UsernameSetupView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .scaleEffect(0.8)
                         } else {
-                            Text("Create Account")
+                            Text(email != nil ? "Create Account" : "Complete Setup")
                                 .fontWeight(.semibold)
                         }
                     }
@@ -153,10 +155,18 @@ struct UsernameSetupView: View {
         }
         .navigationBarHidden(true)
         .preferredColorScheme(.light)
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    // Dismiss keyboard when tapping anywhere
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+        )
     }
     
     private var isFormValid: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        let nameValid = email != nil ? !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty : true
+        return nameValid &&
         username.count >= 3 &&
         username.count <= 20 &&
         usernameAvailable &&
@@ -173,12 +183,15 @@ struct UsernameSetupView: View {
         isCheckingUsername = true
         showUsernameTaken = false
         
-        // Simulate API call to check username availability
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            // For now, we'll simulate that usernames are available
-            // In a real app, this would call Firebase to check
-            self.usernameAvailable = true
-            self.isCheckingUsername = false
+        Task {
+            let isAvailable = await authManager.checkUsernameAvailability(username)
+            await MainActor.run {
+                self.usernameAvailable = isAvailable
+                self.isCheckingUsername = false
+                if !isAvailable {
+                    self.showUsernameTaken = true
+                }
+            }
         }
     }
     
@@ -205,13 +218,19 @@ struct UsernameSetupView: View {
                 return
             }
             
-            // Create account with username
-            await authManager.signUpWithUsername(
-                email: email,
-                password: password,
-                name: displayName,
-                username: usernameLower
-            )
+            // Check if this is a manual signup (has email and password) or Google signup
+            if let email = email, let password = password {
+                // Manual signup - create account with username
+                await authManager.signUpWithUsername(
+                    email: email,
+                    password: password,
+                    name: displayName,
+                    username: usernameLower
+                )
+            } else {
+                // Google signup - just complete username setup
+                authManager.completeUsernameSetup(username: usernameLower)
+            }
             
             await MainActor.run {
                 isLoading = false

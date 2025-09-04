@@ -39,5 +39,12 @@ struct HistoryView: View {
             }
         }
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search by person or name")
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    // Dismiss keyboard when tapping anywhere
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+        )
     }
 }

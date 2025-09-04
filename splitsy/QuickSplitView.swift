@@ -355,6 +355,13 @@ struct QuickSplitView: View {
                 clearNewItem()
             }
         }
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    // Dismiss keyboard when tapping anywhere
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+        )
     }
     
     private var reviewViewContent: some View {
@@ -700,7 +707,6 @@ struct QuickSplitReviewView: View {
                 Button("Done") { onDone() }
             }
         }
-
     }
     
     @MainActor

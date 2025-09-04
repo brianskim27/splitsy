@@ -113,5 +113,12 @@ struct ReviewSplitView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardHeight = 0
         }
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    // Dismiss keyboard when tapping anywhere
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+        )
     }
 }

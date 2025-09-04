@@ -5,6 +5,7 @@ import FirebaseCore
 import FirebaseStorage
 import AuthenticationServices
 import GoogleSignIn
+import SwiftUI
 
 class FirebaseService: ObservableObject {
     static let shared = FirebaseService()
@@ -17,6 +18,7 @@ class FirebaseService: ObservableObject {
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var authState: AuthState = .loading
     
     private init() {
         // Configure Firebase settings for better network handling
@@ -43,7 +45,9 @@ class FirebaseService: ObservableObject {
         if let currentUser = auth.currentUser {
             handleUserSignIn(currentUser)
         } else {
-            handleUserSignOut()
+            DispatchQueue.main.async {
+                self.authState = .signedOut
+            }
         }
     }
     
@@ -56,6 +60,16 @@ class FirebaseService: ObservableObject {
         }
         
         do {
+            // Check if email is already taken
+            let isEmailAvailable = await checkEmailAvailability(email)
+            guard isEmailAvailable else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "This email is already registered. Please use a different email or sign in instead."
+                    self.isLoading = false
+                }
+                return
+            }
+            
             let authResult = try await auth.createUser(withEmail: email, password: password)
             
             // Create user profile in Firestore
@@ -71,7 +85,8 @@ class FirebaseService: ObservableObject {
             
             DispatchQueue.main.async {
                 self.currentUser = user
-                self.isAuthenticated = true
+                self.isAuthenticated = false // Not fully authenticated until username is set
+                self.authState = .needsUsernameSetup
                 self.isLoading = false
             }
             
@@ -90,6 +105,16 @@ class FirebaseService: ObservableObject {
         }
         
         do {
+            // Check if email is already taken
+            let isEmailAvailable = await checkEmailAvailability(email)
+            guard isEmailAvailable else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "This email is already registered. Please use a different email or sign in instead."
+                    self.isLoading = false
+                }
+                return
+            }
+            
             let authResult = try await auth.createUser(withEmail: email, password: password)
             
             // Create user profile in Firestore
@@ -122,6 +147,18 @@ class FirebaseService: ObservableObject {
         do {
             let usernameDoc = try await db.collection("usernames").document(username.lowercased()).getDocument()
             return !usernameDoc.exists
+        } catch {
+            return false
+        }
+    }
+    
+    func checkEmailAvailability(_ email: String) async -> Bool {
+        do {
+            let emailQuery = try await db.collection("users")
+                .whereField("email", isEqualTo: email.lowercased())
+                .limit(to: 1)
+                .getDocuments()
+            return emailQuery.documents.isEmpty
         } catch {
             return false
         }
@@ -313,16 +350,16 @@ class FirebaseService: ObservableObject {
             
             let authResult = try await withCheckedThrowingContinuation { continuation in
                 Task { @MainActor in
-                    let controller = ASAuthorizationController(authorizationRequests: [request])
-                    let delegate = AppleSignInDelegate { result in
-                        continuation.resume(with: result)
-                    }
-                    controller.delegate = delegate
-                    controller.presentationContextProvider = delegate
-                    controller.performRequests()
-                    
-                    // Store delegate to prevent deallocation
-                    objc_setAssociatedObject(controller, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN)
+                let controller = ASAuthorizationController(authorizationRequests: [request])
+                let delegate = AppleSignInDelegate { result in
+                    continuation.resume(with: result)
+                }
+                controller.delegate = delegate
+                controller.presentationContextProvider = delegate
+                controller.performRequests()
+                
+                // Store delegate to prevent deallocation
+                objc_setAssociatedObject(controller, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN)
                 }
             }
             
@@ -405,6 +442,74 @@ class FirebaseService: ObservableObject {
     
     // MARK: - Google Sign In
     
+    func cancelIncompleteSignup() async {
+        guard let userId = auth.currentUser?.uid else { return }
+        
+        do {
+            // Delete the incomplete user profile from Firestore
+            try await db.collection("users").document(userId).delete()
+            
+            // Sign out from Firebase Auth
+            try auth.signOut()
+            
+            DispatchQueue.main.async {
+                self.currentUser = nil
+                self.isAuthenticated = false
+                self.authState = .signedOut
+            }
+        } catch {
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to cancel signup: \(error.localizedDescription)"
+            }
+        }
+    }
+    
+    func completeUsernameSetup(username: String) async {
+        guard let userId = auth.currentUser?.uid else { return }
+        
+        DispatchQueue.main.async {
+            self.isLoading = true
+            self.errorMessage = nil
+        }
+        
+        do {
+            // Check if username is available
+            let isAvailable = await checkUsernameAvailability(username)
+            guard isAvailable else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Username is already taken"
+                    self.isLoading = false
+                }
+                return
+            }
+            
+            // Reserve the username
+            try await reserveUsername(username: username.lowercased(), userId: userId)
+            
+            // Update user profile with username
+            try await db.collection("users").document(userId).updateData([
+                "username": username.lowercased(),
+                "usernameLastChanged": Timestamp(date: Date())
+            ])
+            
+            // Update current user object
+            DispatchQueue.main.async {
+                self.currentUser?.username = username.lowercased()
+                self.currentUser?.usernameLastChanged = Date()
+                // User is now fully authenticated with username
+                self.isAuthenticated = true
+                self.authState = .signedIn
+                self.isLoading = false
+            }
+            
+        } catch {
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to set username: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+        }
+    }
+    
     func signInWithGoogle() async {
         DispatchQueue.main.async {
             self.isLoading = true
@@ -421,9 +526,9 @@ class FirebaseService: ObservableObject {
             
             // Get UI elements on main thread
             let rootViewController = await MainActor.run {
-                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                      let window = windowScene.windows.first,
-                      let rootViewController = window.rootViewController else {
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let window = windowScene.windows.first,
+                  let rootViewController = window.rootViewController else {
                     return nil as UIViewController?
                 }
                 return rootViewController
@@ -450,20 +555,31 @@ class FirebaseService: ObservableObject {
             let isNewUser = authResult.additionalUserInfo?.isNewUser ?? false
             
             if isNewUser {
-                // Create user profile for new users
+                // Create user profile for new users without username
                 let user = User(
                     id: authResult.user.uid,
                     email: signInResult.user.profile?.email ?? "",
                     name: signInResult.user.profile?.name ?? "Google User",
-                    username: "",
+                    username: "", // Empty username indicates needs setup
                     createdAt: Date()
                 )
                 
                 try await saveUserToFirestore(user)
-            }
-            
-            DispatchQueue.main.async {
-                self.isLoading = false
+                
+                DispatchQueue.main.async {
+                    self.currentUser = user
+                    // User is not fully authenticated until username is set
+                    self.isAuthenticated = false
+                    self.isLoading = false
+                    // Set state to needs username setup
+                    self.authState = .needsUsernameSetup
+                }
+            } else {
+                // Existing user - load their profile
+                handleUserSignIn(authResult.user)
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
             }
             
         } catch {
@@ -619,19 +735,32 @@ class FirebaseService: ObservableObject {
                     
                     DispatchQueue.main.async {
                         self.currentUser = user
-                        self.isAuthenticated = true
+                        // Check if user needs username setup
+                        if user.username.isEmpty {
+                            // User is not fully authenticated until username is set
+                            self.isAuthenticated = false
+                            self.authState = .needsUsernameSetup
+                        } else {
+                            // User is fully authenticated with username
+                            self.isAuthenticated = true
+                            self.authState = .signedIn
+                        }
                     }
                 } else {
-                    // User doesn't exist in Firestore (shouldn't happen with our flow)
+                    // User doesn't exist in Firestore - sign them out
                     DispatchQueue.main.async {
-                        self.errorMessage = "User profile not found"
+                        self.currentUser = nil
                         self.isAuthenticated = false
+                        self.authState = .signedOut
                     }
+                    // Sign out from Firebase Auth as well
+                    try auth.signOut()
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.errorMessage = "Failed to load user profile: \(error.localizedDescription)"
                     self.isAuthenticated = false
+                    self.authState = .signedOut
                 }
             }
         }
@@ -641,6 +770,7 @@ class FirebaseService: ObservableObject {
         DispatchQueue.main.async {
             self.currentUser = nil
             self.isAuthenticated = false
+            self.authState = .signedOut
         }
     }
     
@@ -685,8 +815,8 @@ class FirebaseService: ObservableObject {
         
         // Handle custom errors
         let nsError = error as NSError
-        switch nsError.domain {
-        case "FirebaseService":
+            switch nsError.domain {
+            case "FirebaseService":
             switch nsError.code {
             case 6:
                 return "Username not found. Please check your username and try again."
@@ -695,11 +825,11 @@ class FirebaseService: ObservableObject {
             default:
                 return nsError.localizedDescription
             }
-        default:
-            return error.localizedDescription
+            default:
+                return error.localizedDescription
+            }
         }
-    }
-    
+        
     // MARK: - Profile Picture Methods
     
     func uploadProfilePicture(_ image: UIImage) async {

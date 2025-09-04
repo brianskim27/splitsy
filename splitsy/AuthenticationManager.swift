@@ -6,6 +6,7 @@ enum AuthState {
     case signedOut
     case signedIn
     case loading
+    case needsUsernameSetup
 }
 
 class AuthenticationManager: ObservableObject {
@@ -81,6 +82,14 @@ class AuthenticationManager: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+        
+        firebaseService.$authState
+            .sink { [weak self] authState in
+                DispatchQueue.main.async {
+                    self?.authState = authState
+                }
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Authentication Methods
@@ -97,6 +106,10 @@ class AuthenticationManager: ObservableObject {
     
     func checkUsernameAvailability(_ username: String) async -> Bool {
         return await firebaseService.checkUsernameAvailability(username)
+    }
+    
+    func checkEmailAvailability(_ email: String) async -> Bool {
+        return await firebaseService.checkEmailAvailability(email)
     }
     
     func updateProfile(name: String, username: String?) async {
@@ -178,6 +191,18 @@ class AuthenticationManager: ObservableObject {
     func signInWithGoogle() {
         Task {
             await firebaseService.signInWithGoogle()
+        }
+    }
+    
+    func completeUsernameSetup(username: String) {
+        Task {
+            await firebaseService.completeUsernameSetup(username: username)
+        }
+    }
+    
+    func cancelIncompleteSignup() {
+        Task {
+            await firebaseService.cancelIncompleteSignup()
         }
     }
 }

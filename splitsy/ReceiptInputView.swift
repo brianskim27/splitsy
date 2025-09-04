@@ -13,6 +13,7 @@ struct ReceiptInputView: View {
     @State private var showFullScreenImage = false
     @State private var editingItemId: UUID? = nil
     @State private var editingItemName: String = ""
+    @State private var editingItemPrice: String = ""
 
     var body: some View {
         NavigationStack {
@@ -103,29 +104,54 @@ struct ReceiptInputView: View {
                         ForEach(parsedItems, id: \.id) { item in
                             HStack {
                                         if editingItemId == item.id {
-                                            TextField("Item Name", text: $editingItemName, onCommit: {
-                                                renameItem(id: item.id, newName: editingItemName)
-                                                editingItemId = nil
-                                            })
-                                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                                            VStack(spacing: 8) {
+                                                TextField("Item Name", text: $editingItemName, onCommit: {
+                                                    saveItemEdits(id: item.id)
+                                                })
+                                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                                .font(.body.bold())
+                                                
+                                                HStack {
+                                                    Text("$")
+                                                        .foregroundColor(.green)
+                                                        .font(.subheadline)
+                                                        .bold()
+                                                    TextField("0.00", text: $editingItemPrice, onCommit: {
+                                                        saveItemEdits(id: item.id)
+                                                    })
+                                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                                    .keyboardType(.decimalPad)
+                                                    .font(.subheadline)
+                                                    .bold()
+                                                }
+                                            }
                                             .frame(minWidth: 80, maxWidth: 180)
-                                            .font(.body.bold())
                                         } else {
-                                Text(item.name)
-                                    .font(.body)
-                                    .bold()
-                                    .multilineTextAlignment(.leading)
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(item.name)
+                                                    .font(.body)
+                                                    .bold()
+                                                    .multilineTextAlignment(.leading)
+                                                
+                                                Text("$\(item.cost, specifier: "%.2f")")
+                                                    .foregroundColor(.green)
+                                                    .font(.subheadline)
+                                                    .bold()
+                                            }
                                         }
                                 Spacer()
-                                Text("$\(item.cost, specifier: "%.2f")")
-                                    .foregroundColor(.green)
-                                            .font(.subheadline)
-                                    .bold()
+                                if editingItemId != item.id {
+                                    Text("$\(item.cost, specifier: "%.2f")")
+                                        .foregroundColor(.green)
+                                        .font(.subheadline)
+                                        .bold()
                                         .padding(.trailing, 8)
-                                        Button(action: {
-                                            editingItemId = item.id
-                                            editingItemName = item.name
-                                        }) {
+                                }
+                                Button(action: {
+                                    editingItemId = item.id
+                                    editingItemName = item.name
+                                    editingItemPrice = String(format: "%.2f", item.cost)
+                                }) {
                                             Image(systemName: "pencil")
                                                 .foregroundColor(.blue)
                                         }
@@ -200,6 +226,13 @@ struct ReceiptInputView: View {
                 ImagePicker(image: $receiptImage, sourceType: .photoLibrary)
             }
         }
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    // Dismiss keyboard when tapping anywhere
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+        )
         .onAppear {
             if let image = receiptImage, parsedItems.isEmpty {
                 analyzeReceiptImage(image)
@@ -535,12 +568,26 @@ struct ReceiptInputView: View {
         return false
     }
 
-    // Rename item by ID
-    private func renameItem(id: UUID, newName: String) {
+    // Save item edits (name and price) by ID
+    private func saveItemEdits(id: UUID) {
         if let idx = parsedItems.firstIndex(where: { $0.id == id }) {
             var updatedItem = parsedItems[idx]
-            updatedItem.name = newName
+            
+            // Update name
+            let trimmedName = editingItemName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedName.isEmpty {
+                updatedItem.name = trimmedName
+            }
+            
+            // Update price
+            if let price = Double(editingItemPrice) {
+                updatedItem.cost = price
+            }
+            
             parsedItems[idx] = updatedItem
+            editingItemId = nil
+            editingItemName = ""
+            editingItemPrice = ""
         }
     }
 }

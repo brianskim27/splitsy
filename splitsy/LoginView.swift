@@ -210,6 +210,13 @@ struct LoginView: View {
             .navigationBarHidden(true)
         }
         .preferredColorScheme(.light)
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    // Dismiss keyboard when tapping anywhere
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+        )
         .sheet(isPresented: $showSignUp) {
             SignUpView()
                 .environmentObject(authManager)
@@ -310,6 +317,13 @@ struct ForgotPasswordView: View {
                 }
             }
             .preferredColorScheme(.light)
+            .simultaneousGesture(
+                TapGesture()
+                    .onEnded { _ in
+                        // Dismiss keyboard when tapping anywhere
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+            )
         }
     }
     
