@@ -59,6 +59,7 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showHelpSupport) {
             HelpSupportView()
+                .environmentObject(authManager)
         }
         .sheet(isPresented: $showDataExport) {
             DataExportView()
@@ -1043,28 +1044,669 @@ struct NotificationsView: View {
 
 struct HelpSupportView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authManager: AuthenticationManager
+    @State private var searchText = ""
+    @State private var selectedCategory: HelpCategory = .gettingStarted
+    @State private var showContactSupport = false
+    
+    enum HelpCategory: String, CaseIterable {
+        case gettingStarted = "Getting Started"
+        case faq = "FAQ"
+        case troubleshooting = "Troubleshooting"
+        case contact = "Contact Support"
+        
+        var icon: String {
+            switch self {
+            case .gettingStarted: return "play.circle.fill"
+            case .faq: return "questionmark.circle.fill"
+            case .troubleshooting: return "wrench.and.screwdriver.fill"
+            case .contact: return "envelope.fill"
+            }
+        }
+        
+        var color: Color {
+            switch self {
+            case .gettingStarted: return .blue
+            case .faq: return .green
+            case .troubleshooting: return .orange
+            case .contact: return .purple
+            }
+        }
+    }
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                Text("Help & Support")
-                    .font(.title)
-                    .bold()
+            VStack(spacing: 0) {
+                // Search Bar
+                searchBar
                 
-                Text("Help and support coming soon!")
-                    .foregroundColor(.secondary)
+                // Category Picker
+                categoryPicker
                 
-                Spacer()
+                // Content
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        switch selectedCategory {
+                        case .gettingStarted:
+                            gettingStartedContent
+                        case .faq:
+                            faqContent
+                        case .troubleshooting:
+                            troubleshootingContent
+                        case .contact:
+                            contactContent
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
+                }
             }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Help & Support")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
+                    .font(.headline)
                 }
             }
+        }
+        .sheet(isPresented: $showContactSupport) {
+            ContactSupportView()
+                .environmentObject(authManager)
+        }
+    }
+    
+    // MARK: - Search Bar
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            
+            TextField("Search help topics...", text: $searchText)
+                .textFieldStyle(PlainTextFieldStyle())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
+    }
+    
+    // MARK: - Category Picker
+    private var categoryPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(HelpCategory.allCases, id: \.self) { category in
+                    CategoryButton(
+                        category: category,
+                        isSelected: selectedCategory == category
+                    ) {
+                        selectedCategory = category
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .padding(.bottom, 20)
+    }
+    
+    // MARK: - Getting Started Content
+    private var gettingStartedContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HelpSection(title: "Welcome to Splitsy!") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Splitsy makes splitting bills effortless with AI-powered receipt scanning. Here's how to get started:")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    
+                    HelpStep(
+                        number: 1,
+                        title: "Take a Photo",
+                        description: "Point your camera at a receipt and tap the capture button. Our AI will automatically detect and extract items and prices."
+                    )
+                    
+                    HelpStep(
+                        number: 2,
+                        title: "Review Items",
+                        description: "Check the detected items and prices. You can edit any item or add missing ones manually."
+                    )
+                    
+                    HelpStep(
+                        number: 3,
+                        title: "Assign Items",
+                        description: "Tap on items to assign them to different people. The app will calculate totals automatically."
+                    )
+                    
+                    HelpStep(
+                        number: 4,
+                        title: "Add Tips & Tax",
+                        description: "Include tips and tax as needed. Choose between percentage or fixed amounts."
+                    )
+                    
+                    HelpStep(
+                        number: 5,
+                        title: "Share Results",
+                        description: "Review the final split and share the results with your group."
+                    )
+                }
+            }
+            
+            HelpSection(title: "Quick Tips") {
+                VStack(alignment: .leading, spacing: 8) {
+                    TipRow(icon: "camera.fill", text: "Ensure good lighting when taking receipt photos")
+                    TipRow(icon: "textformat", text: "Receipt text should be clear and readable")
+                    TipRow(icon: "person.2.fill", text: "Add people before assigning items for easier organization")
+                    TipRow(icon: "dollarsign.circle.fill", text: "Set your preferred currency in Profile > Currency")
+                }
+            }
+        }
+    }
+    
+    // MARK: - FAQ Content
+    private var faqContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HelpSection(title: "Frequently Asked Questions") {
+                VStack(spacing: 12) {
+                    FAQItem(
+                        question: "How accurate is the receipt scanning?",
+                        answer: "Our AI-powered scanning is highly accurate for most receipts. However, results may vary with poor lighting, blurry photos, or unusual receipt formats. You can always manually edit detected items."
+                    )
+                    
+                    FAQItem(
+                        question: "Can I split bills in different currencies?",
+                        answer: "Yes! Splitsy supports multiple currencies with real-time conversion rates. Set your preferred currency in Profile > Currency, and the app will handle conversions automatically."
+                    )
+                    
+                    FAQItem(
+                        question: "Is my data secure?",
+                        answer: "Absolutely. We use Firebase for secure data storage and encryption. Your personal information and split history are protected with industry-standard security measures."
+                    )
+                    
+                    FAQItem(
+                        question: "Can I export my split history?",
+                        answer: "Yes, you can export your split history from Profile > Data Export. This feature allows you to download your data for personal records or backup purposes."
+                    )
+                    
+                    FAQItem(
+                        question: "What if the app doesn't detect an item correctly?",
+                        answer: "You can manually edit any detected item by tapping on it. You can also add new items manually if they weren't detected from the receipt."
+                    )
+                    
+                    FAQItem(
+                        question: "Does Splitsy work offline?",
+                        answer: "Core functionality works offline, but you'll need an internet connection for receipt scanning, currency conversion, and data synchronization."
+                    )
+                }
+            }
+        }
+    }
+    
+    // MARK: - Troubleshooting Content
+    private var troubleshootingContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HelpSection(title: "Common Issues") {
+                VStack(spacing: 16) {
+                    TroubleshootingItem(
+                        issue: "Receipt scanning not working",
+                        solutions: [
+                            "Ensure good lighting and clear receipt text",
+                            "Try taking the photo from a different angle",
+                            "Make sure the receipt is flat and not wrinkled",
+                            "Check that your internet connection is stable"
+                        ]
+                    )
+                    
+                    TroubleshootingItem(
+                        issue: "App crashes or freezes",
+                        solutions: [
+                            "Force close and restart the app",
+                            "Restart your device",
+                            "Check for app updates in the App Store",
+                            "Clear app cache by signing out and back in"
+                        ]
+                    )
+                    
+                    TroubleshootingItem(
+                        issue: "Currency conversion not updating",
+                        solutions: [
+                            "Check your internet connection",
+                            "Try switching to a different currency and back",
+                            "Restart the app to refresh exchange rates",
+                            "Ensure you're using the latest app version"
+                        ]
+                    )
+                    
+                    TroubleshootingItem(
+                        issue: "Can't sign in with Google",
+                        solutions: [
+                            "Check your internet connection",
+                            "Make sure you're using the correct Google account",
+                            "Try signing out and back in",
+                            "Restart the app and try again"
+                        ]
+                    )
+                }
+            }
+            
+            HelpSection(title: "Still Need Help?") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("If you're still experiencing issues, our support team is here to help.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    
+                    Button(action: {
+                        showContactSupport = true
+                    }) {
+                        HStack {
+                            Image(systemName: "envelope.fill")
+                            Text("Contact Support")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.accentColor)
+                        .cornerRadius(12)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Contact Content
+    private var contactContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HelpSection(title: "Get in Touch") {
+                VStack(spacing: 16) {
+                    ContactOption(
+                        icon: "envelope.fill",
+                        title: "Email Support",
+                        subtitle: "Get help via email",
+                        action: {
+                            if let url = URL(string: "mailto:splitsy.contact@gmail.com") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                    )
+                    
+                    ContactOption(
+                        icon: "star.fill",
+                        title: "Rate Splitsy",
+                        subtitle: "Help us improve on the App Store",
+                        action: {
+                            // TODO: Add App Store rating URL when available
+                        }
+                    )
+                    
+                    ContactOption(
+                        icon: "heart.fill",
+                        title: "Send Feedback",
+                        subtitle: "Share your thoughts and suggestions",
+                        action: {
+                            showContactSupport = true
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Supporting Views
+
+struct CategoryButton: View {
+    let category: HelpSupportView.HelpCategory
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: category.icon)
+                    .font(.system(size: 16, weight: .medium))
+                
+                Text(category.rawValue)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            .foregroundColor(isSelected ? .white : category.color)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(isSelected ? category.color : Color(.systemGray6))
+            )
+        }
+    }
+}
+
+struct HelpSection<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct HelpStep: View {
+    let number: Int
+    let title: String
+    let description: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(number)")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(Color.accentColor))
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineSpacing(2)
+            }
+            
+            Spacer()
+        }
+    }
+}
+
+struct TipRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.accentColor)
+                .frame(width: 20)
+            
+            Text(text)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Spacer()
+        }
+    }
+}
+
+struct FAQItem: View {
+    let question: String
+    let answer: String
+    @State private var isExpanded = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    Text(question)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+                    
+                    Spacer()
+                    
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            if isExpanded {
+                Text(answer)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineSpacing(2)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+}
+
+struct TroubleshootingItem: View {
+    let issue: String
+    let solutions: [String]
+    @State private var isExpanded = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 16))
+                    
+                    Text(issue)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(solutions.enumerated()), id: \.offset) { index, solution in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("•")
+                                .foregroundColor(.accentColor)
+                                .fontWeight(.bold)
+                            
+                            Text(solution)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineSpacing(2)
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+}
+
+struct ContactOption: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+        }
+    }
+}
+
+
+struct ContactSupportView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authManager: AuthenticationManager
+    @State private var showFeedbackForm = false
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Contact Support")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text("Choose how you'd like to get in touch with our support team.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Contact Options
+                    VStack(spacing: 16) {
+                        ContactSupportOption(
+                            icon: "envelope.fill",
+                            title: "Email Support",
+                            subtitle: "Get help via email",
+                            description: "Send us an email and we'll respond within 24-48 hours",
+                            action: {
+                                if let url = URL(string: "mailto:splitsy.contact@gmail.com") {
+                                    UIApplication.shared.open(url)
+                                }
+                            }
+                        )
+                        
+                        ContactSupportOption(
+                            icon: "text.bubble.fill",
+                            title: "Send Feedback",
+                            subtitle: "Report bugs or suggest features",
+                            description: "Use our detailed feedback form to help us improve",
+                            action: {
+                                showFeedbackForm = true
+                            }
+                        )
+                        
+                        ContactSupportOption(
+                            icon: "star.fill",
+                            title: "Rate Splitsy",
+                            subtitle: "Help us improve on the App Store",
+                            description: "Your ratings help other users discover Splitsy",
+                            action: {
+                                // TODO: Add App Store rating URL when available
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+            .navigationTitle("Contact Support")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showFeedbackForm) {
+            FeedbackView()
+                .environmentObject(authManager)
+        }
+    }
+}
+
+struct ContactSupportOption: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let description: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 32, height: 32)
+                    .background(Color.accentColor.opacity(0.1))
+                    .clipShape(Circle())
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                    
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineSpacing(2)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
         }
     }
 }
@@ -1249,3 +1891,4 @@ struct GridLines: View {
         .allowsHitTesting(false)
     }
 }
+

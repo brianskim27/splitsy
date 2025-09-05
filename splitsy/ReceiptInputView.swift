@@ -16,6 +16,9 @@ struct ReceiptInputView: View {
     @State private var editingItemName: String = ""
     @State private var editingItemPrice: String = ""
     @State private var keyboardHeight: CGFloat = 0
+    @State private var showAddItem = false
+    @State private var newItemName: String = ""
+    @State private var newItemPrice: String = ""
 
     var body: some View {
         NavigationStack {
@@ -226,6 +229,64 @@ struct ReceiptInputView: View {
                                                 }
                                                 .accessibilityLabel("Delete item")
                                             }
+                                        }
+                                    }
+                                }
+                                
+                                // Add Item Button
+                                if showAddItem {
+                                    AddItemCard(
+                                        newItemName: $newItemName,
+                                        newItemPrice: $newItemPrice,
+                                        onSave: addNewItem,
+                                        onCancel: {
+                                            showAddItem = false
+                                            newItemName = ""
+                                            newItemPrice = ""
+                                        }
+                                    )
+                                } else {
+                                    // Add (+) Button
+                                    VStack(spacing: 12) {
+                                        // Item Card
+                                        Button(action: {
+                                            showAddItem = true
+                                            newItemName = ""
+                                            newItemPrice = ""
+                                        }) {
+                                            VStack(spacing: 6) {
+                                                Image(systemName: "plus.circle.fill")
+                                                    .font(.system(size: 24))
+                                                    .foregroundColor(.blue)
+                                                    .padding(.top, 6)
+                                                
+                                                Text("Add Item")
+                                                    .font(.caption)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.blue)
+                                                    .lineLimit(2)
+                                                    .multilineTextAlignment(.center)
+                                                    .frame(height: 32)
+                                            }
+                                        }
+                                        .frame(width: 120, height: 80)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color.blue.opacity(0.1))
+                                        .cornerRadius(16)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(Color.blue.opacity(0.3), lineWidth: 2)
+                                        )
+                                        .accessibilityLabel("Add new item manually")
+                                        
+                                        // Action Buttons - Invisible to match other items' spacing
+                                        HStack(spacing: 8) {
+                                            // Invisible buttons to match the height of edit/delete buttons
+                                            Color.clear
+                                                .frame(width: 24, height: 24)
+                                            Color.clear
+                                                .frame(width: 24, height: 24)
                                         }
                                     }
                                 }
@@ -680,6 +741,112 @@ struct ReceiptInputView: View {
             editingItemId = nil
             editingItemName = ""
             editingItemPrice = ""
+        }
+    }
+    
+    // MARK: - Add New Item Function
+    private func addNewItem() {
+        guard !newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let price = Double(newItemPrice.trimmingCharacters(in: .whitespacesAndNewlines)),
+              price > 0 else {
+            return
+        }
+        
+        let newItem = ReceiptItem(
+            name: newItemName.trimmingCharacters(in: .whitespacesAndNewlines),
+            cost: price
+        )
+        
+        parsedItems.append(newItem)
+        
+        // Reset the form
+        showAddItem = false
+        newItemName = ""
+        newItemPrice = ""
+    }
+}
+
+// MARK: - AddItemCard Component
+struct AddItemCard: View {
+    @Binding var newItemName: String
+    @Binding var newItemPrice: String
+    let onSave: () -> Void
+    let onCancel: () -> Void
+    @EnvironmentObject var currencyManager: CurrencyManager
+    @FocusState private var isNameFieldFocused: Bool
+    @FocusState private var isPriceFieldFocused: Bool
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Item Input Card
+            VStack(spacing: 8) {
+                VStack(spacing: 6) {
+                    TextField("Item Name", text: $newItemName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                        .focused($isNameFieldFocused)
+                        .onSubmit {
+                            isPriceFieldFocused = true
+                        }
+                    
+                    HStack(spacing: 2) {
+                        Text(currencyManager.selectedCurrency.symbol)
+                            .foregroundColor(.green)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                        TextField("0.00", text: $newItemPrice)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.decimalPad)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .multilineTextAlignment(.center)
+                            .focused($isPriceFieldFocused)
+                            .onSubmit {
+                                if !newItemName.isEmpty && !newItemPrice.isEmpty {
+                                    onSave()
+                                }
+                            }
+                    }
+                }
+            }
+            .frame(width: 120, height: 80)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6).opacity(0.6))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.blue.opacity(0.5), lineWidth: 2)
+            )
+            
+            // Action Buttons
+            HStack(spacing: 8) {
+                Button(action: onSave) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.green)
+                        .frame(width: 24, height: 24)
+                        .background(Color.green.opacity(0.15))
+                        .clipShape(Circle())
+                }
+                .disabled(newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || 
+                         newItemPrice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity((newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || 
+                         newItemPrice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.5 : 1.0)
+                
+                Button(action: onCancel) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.red)
+                        .frame(width: 24, height: 24)
+                        .background(Color.red.opacity(0.15))
+                        .clipShape(Circle())
+                }
+            }
+        }
+        .onAppear {
+            isNameFieldFocused = true
         }
     }
 }
