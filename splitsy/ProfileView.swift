@@ -356,7 +356,7 @@ struct ProfileView: View {
     
     private var moneySaved: Double {
         splitHistoryManager.pastSplits.reduce(0) { total, split in
-            let yourShare = split.userShares["Brian"] ?? 0
+            let yourShare = split.userShares[authManager.currentUser?.name ?? ""] ?? 0
             let fullAmount = split.totalAmount
             
             // Convert both amounts to current currency

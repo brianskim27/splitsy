@@ -6,6 +6,7 @@ class FunFactsManager: ObservableObject {
     private let userDefaultsKey = "lastFunFactIndex"
     private let sessionKey = "currentSessionId"
     private var currentSessionId: String = ""
+    private var currentUserName: String = ""
     
     private let funFacts: [FunFact] = [
         FunFact(
@@ -120,6 +121,10 @@ class FunFactsManager: ObservableObject {
         
         // Clear the current fun fact to force regeneration
         currentFunFact = ""
+    }
+    
+    func setCurrentUser(_ userName: String) {
+        currentUserName = userName
     }
     
     func generateFunFact(from splits: [Split]) {
@@ -291,7 +296,7 @@ class FunFactsManager: ObservableObject {
     // Helper methods for data analysis
     private func calculateMoneySaved(from splits: [Split]) -> Double {
         return splits.reduce(0) { total, split in
-            let yourShare = split.userShares["Brian"] ?? 0
+            let yourShare = split.userShares[currentUserName] ?? 0
             let fullAmount = split.totalAmount
             return total + (fullAmount - yourShare)
         }
@@ -368,7 +373,7 @@ class FunFactsManager: ObservableObject {
     
     private func isGenerousFriend(splits: [Split]) -> Bool {
         let generousSplits = splits.filter { split in
-            let yourShare = split.userShares["Brian"] ?? 0
+            let yourShare = split.userShares[currentUserName] ?? 0
             let fairShare = split.totalAmount / Double(split.userShares.count)
             return yourShare > fairShare * 1.1 // 10% more than fair share
         }
@@ -471,7 +476,7 @@ class FunFactsManager: ObservableObject {
         guard !splits.isEmpty else { return 0 }
         
         let totalSavings = splits.reduce(0.0) { total, split in
-            let yourShare = split.userShares["Brian"] ?? 0
+            let yourShare = split.userShares[currentUserName] ?? 0
             let fullAmount = split.totalAmount
             return total + (fullAmount - yourShare)
         }

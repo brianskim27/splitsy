@@ -34,6 +34,10 @@ struct SplitsyApp: App {
                                    let currency = Currency.supportedCurrencies.first(where: { $0.code == user.preferredCurrency }) {
                                     currencyManager.setCurrency(currency)
                                 }
+                                // Set current user in FunFactsManager
+                                if let userName = authManager.currentUser?.name {
+                                    funFactsManager.setCurrentUser(userName)
+                                }
                             }
                     }
                     .preferredColorScheme(.light)

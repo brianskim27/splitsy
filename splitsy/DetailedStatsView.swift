@@ -6,6 +6,7 @@ struct DetailedStatsView: View {
     let statType: StatType
     let selectedMonth: Date
     @EnvironmentObject var currencyManager: CurrencyManager
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var selectedPeriod: TimePeriod = .selectedMonth
     @State private var showPeriodDropdown = false
     @State private var selectedDataPoint: MonthData?
@@ -107,7 +108,7 @@ struct DetailedStatsView: View {
                     }
                 case .moneySaved:
                     value = weekSplits.reduce(0) { total, split in
-                        let yourShare = split.userShares["Brian"] ?? 0
+                        let yourShare = split.userShares[authManager.currentUser?.name ?? ""] ?? 0
                         let fullAmount = split.totalAmount
                         
                         // Convert both amounts to current currency
@@ -153,7 +154,7 @@ struct DetailedStatsView: View {
                     }
                 case .moneySaved:
                     value = monthSplits.reduce(0) { total, split in
-                        let yourShare = split.userShares["Brian"] ?? 0
+                        let yourShare = split.userShares[authManager.currentUser?.name ?? ""] ?? 0
                         let fullAmount = split.totalAmount
                         
                         // Convert both amounts to current currency
@@ -193,7 +194,7 @@ struct DetailedStatsView: View {
                         }
                     case .moneySaved:
                         value = monthSplits.reduce(0) { total, split in
-                            let yourShare = split.userShares["Brian"] ?? 0
+                            let yourShare = split.userShares[authManager.currentUser?.name ?? ""] ?? 0
                             let fullAmount = split.totalAmount
                             
                             // Convert both amounts to current currency
