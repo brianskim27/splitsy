@@ -12,6 +12,7 @@ struct ProfileView: View {
     @State private var showNotifications = false
     @State private var showHelpSupport = false
     @State private var showDataExport = false
+    @State private var showFeedback = false
 
     var body: some View {
         ScrollView {
@@ -59,6 +60,9 @@ struct ProfileView: View {
         .sheet(isPresented: $showDataExport) {
             DataExportView()
                 .environmentObject(splitHistoryManager)
+        }
+        .sheet(isPresented: $showFeedback) {
+            FeedbackView()
         }
         .fullScreenCover(isPresented: $showNewSplit) {
             NewSplitFlowView()
@@ -278,6 +282,15 @@ struct ProfileView: View {
                 .bold()
             
             VStack(spacing: 8) {
+                ProfileButton(
+                    title: "Send Feedback",
+                    subtitle: "Report bugs or suggest features",
+                    icon: "envelope",
+                    color: .green
+                ) {
+                    showFeedback = true
+                }
+                
                 ProfileButton(
                     title: "Help & Support",
                     subtitle: "Get help and contact support",
