@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const path = require('path');
 require('dotenv').config();
 
@@ -13,16 +13,7 @@ app.use(express.json({ limit: '10mb' })); // Increased limit for base64 images
 app.use(express.urlencoded({ extended: true }));
 
 // Email configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER, // splitsy.contact@gmail.com
-    pass: process.env.EMAIL_PASS  // App-specific password
-  },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,   // 10 seconds
-  socketTimeout: 10000      // 10 seconds
-});
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // Feedback endpoint
 app.post('/api/feedback', async (req, res) => {
@@ -61,9 +52,9 @@ ${deviceInfo}
     emailBody += '\n\n---\nSent from Splitsy iOS App';
 
     // Email options
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    const msg = {
       to: 'splitsy.contact@gmail.com',
+      from: 'splitsy.contact@gmail.com', // Must be verified in SendGrid
       subject: `Splitsy Feedback: ${feedbackType}`,
       text: emailBody,
       attachments: []
@@ -72,18 +63,19 @@ ${deviceInfo}
     // Handle image attachments
     if (attachedImages && attachedImages.length > 0) {
       attachedImages.forEach((imageBase64, index) => {
-        mailOptions.attachments.push({
-          filename: `screenshot_${index + 1}.jpg`,
+        msg.attachments.push({
           content: imageBase64,
-          encoding: 'base64'
+          filename: `screenshot_${index + 1}.jpg`,
+          type: 'image/jpeg',
+          disposition: 'attachment'
         });
       });
     }
 
     // Send email
-    console.log('📧 Attempting to send email...');
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Feedback email sent successfully:', result.messageId);
+    console.log('📧 Attempting to send email via SendGrid...');
+    const result = await sgMail.send(msg);
+    console.log('✅ Feedback email sent successfully:', result[0].statusCode);
     
     res.status(200).json({ 
       success: true, 
@@ -110,7 +102,7 @@ app.get('/api/health', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Splitsy Feedback API running on port ${PORT}`);
-  console.log(`📧 Email configured for: ${process.env.EMAIL_USER}`);
+  console.log(`📧 Email configured via SendGrid`);
 });
 
 module.exports = app;
