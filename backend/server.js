@@ -33,7 +33,13 @@ app.post('/api/feedback', async (req, res) => {
 
     // Create email content
     let emailBody = `
-Feedback Type: ${feedbackType}
+Hello Splitsy Team,
+
+You have received new feedback from the Splitsy iOS app:
+
+FEEDBACK DETAILS:
+================
+Type: ${feedbackType}
 Priority: ${priority}
 
 Description:
@@ -49,14 +55,52 @@ ${deviceInfo}
     if (contactEmail) emailBody += `\nContact Email: ${contactEmail}`;
     if (additionalComments) emailBody += `\n\nAdditional Comments:\n${additionalComments}`;
 
-    emailBody += '\n\n---\nSent from Splitsy iOS App';
+    emailBody += `\n\nBest regards,
+Splitsy Feedback System
+
+---
+This email was automatically generated from the Splitsy iOS app.
+Please do not reply to this email address.`;
+
+    // Create HTML email content
+    let htmlBody = `
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <h2 style="color: #2c3e50;">New Feedback from Splitsy iOS App</h2>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="color: #2c3e50; margin-top: 0;">Feedback Details</h3>
+        <p><strong>Type:</strong> ${feedbackType}</p>
+        <p><strong>Priority:</strong> ${priority}</p>
+        <p><strong>Description:</strong></p>
+        <p style="background-color: white; padding: 15px; border-left: 4px solid #3498db;">${description.replace(/\n/g, '<br>')}</p>
+        <p><strong>Device Information:</strong> ${deviceInfo}</p>
+    `;
+
+    if (userJourney) htmlBody += `<p><strong>User Journey:</strong> ${userJourney}</p>`;
+    if (frequency) htmlBody += `<p><strong>Frequency:</strong> ${frequency}</p>`;
+    if (impact) htmlBody += `<p><strong>Impact:</strong> ${impact}</p>`;
+    if (contactEmail) htmlBody += `<p><strong>Contact Email:</strong> ${contactEmail}</p>`;
+    if (additionalComments) htmlBody += `<p><strong>Additional Comments:</strong></p><p style="background-color: white; padding: 15px; border-left: 4px solid #e74c3c;">${additionalComments.replace(/\n/g, '<br>')}</p>`;
+
+    htmlBody += `
+      </div>
+      
+      <p style="color: #7f8c8d; font-size: 12px;">
+        This email was automatically generated from the Splitsy iOS app.<br>
+        Please do not reply to this email address.
+      </p>
+    </body>
+    </html>
+    `;
 
     // Email options
     const msg = {
       to: 'splitsy.contact@gmail.com',
-      from: 'splitsy.contact@gmail.com', // Must be verified in SendGrid
+      from: 'Splitsy Team <splitsy.contact@gmail.com>', // More professional format
       subject: `Splitsy Feedback: ${feedbackType}`,
       text: emailBody,
+      html: htmlBody,
       attachments: []
     };
 
