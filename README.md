@@ -1,6 +1,6 @@
 # 🧾 Splitsy
 
-**Split bills effortlessly with AI-powered receipt scanning**
+**Because math shouldn't ruin your dinner plans**
 
 Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting. Simply take a photo of your receipt, and our AI-powered system will automatically parse items and prices, allowing you to assign each item to your party members in seconds.
 
@@ -15,13 +15,14 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 - **Tap to Assign**: Easily assign items to different people
 - **Real-time Calculations**: Instant updates as you assign items
 - **Tip Management**: Add tips with percentage or fixed amount options
-- **Accurate Currencies**: Change and convert currencies in real-time
+- **Multi-Currency Support**: Change and convert currencies in real-time with live rates
 - **Multiple Payment Methods**: Support for various splitting scenarios (coming soon)
 
 ### 🎨 **Modern UI/UX**
 - **Clean, Intuitive Design**: Beautiful SwiftUI interface with smooth animations
 - **Horizontal Item Wheels**: Easy-to-use scrollable item selection
-- **Keyboard-Friendly**: Smart keyboard handling with tap-to-dismiss
+- **User-Friendly**: Streamlined UI structure and navigations for user's comfort
+- **Typing Made Easy**: Smart keyboard handling with tap-to-dismiss
 
 ### 🔐 **Secure Authentication**
 - **Firebase Integration**: Robust user authentication and data storage
@@ -31,7 +32,7 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 
 ### 📊 **Comprehensive History**
 - **Split History**: View all your previous bill splits
-- **Detailed Statistics**: Track spending patterns and split frequency
+- **Statistics Dashboard**: Track spending patterns and split frequency
 - **Receipt Storage**: Access original receipt images anytime
 - **Export Options**: Share split details with friends
 
@@ -191,7 +192,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 **Team**
 
-- **Brian** - Lead Developer & Designer
+- **Brian Kim** - Lead Developer & Designer
 
 ## 📞 **Support**
 
