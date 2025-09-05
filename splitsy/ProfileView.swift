@@ -15,6 +15,7 @@ struct ProfileView: View {
     @State private var showDataExport = false
     @State private var showFeedback = false
     @State private var showCurrencySelection = false
+    @State private var showAbout = false
 
     var body: some View {
         ScrollView {
@@ -70,6 +71,9 @@ struct ProfileView: View {
             CurrencySelectionView()
                 .environmentObject(currencyManager)
                 .environmentObject(authManager)
+        }
+        .sheet(isPresented: $showAbout) {
+            AboutView()
         }
         .fullScreenCover(isPresented: $showNewSplit) {
             NewSplitFlowView()
@@ -322,7 +326,7 @@ struct ProfileView: View {
                     icon: "info.circle",
                     color: .gray
                 ) {
-                    // TODO: Implement about view
+                    showAbout = true
                 }
             }
         }
