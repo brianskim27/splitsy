@@ -8,6 +8,7 @@ struct SplitDetailView: View {
     let split: Split
     @State private var showFullScreen = false
     @State private var isPreparingShare = false
+    
 
     var body: some View {
         NavigationStack {
@@ -48,7 +49,7 @@ struct SplitDetailView: View {
                         Text(split.date, style: .date)
                             .font(.callout)
                             .foregroundColor(.secondary)
-                        Text("Total: \(currencyManager.formatConvertedAmount(split.totalAmount, from: split.originalCurrency))")
+                        Text(currencyManager.formatConvertedAmountSync(split.totalAmount, from: split.originalCurrency))
                             .font(.title2)
                             .bold()
                             .foregroundColor(.green)
@@ -64,7 +65,7 @@ struct SplitDetailView: View {
                                     .font(.headline)
                                     .bold()
                                 Spacer()
-                                Text(currencyManager.formatConvertedAmount(split.userShares[user] ?? 0, from: split.originalCurrency))
+                                Text(currencyManager.formatConvertedAmountSync(split.userShares[user] ?? 0, from: split.originalCurrency))
                                     .font(.headline)
                                     .foregroundColor(.blue)
                             }
@@ -76,7 +77,7 @@ struct SplitDetailView: View {
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                         Spacer()
-                                        Text(currencyManager.formatConvertedAmount(itemDetail.cost, from: split.originalCurrency))
+                                        Text(currencyManager.formatConvertedAmountSync(itemDetail.cost, from: split.originalCurrency))
                                             .font(.subheadline)
                                             .foregroundColor(.green)
                                     }
@@ -368,7 +369,7 @@ struct SplitDetailExportView: View {
                 Text(split.date, style: .date)
                     .font(.callout)
                     .foregroundColor(.secondary)
-                Text("Total: \(currencyManager.formatConvertedAmount(split.totalAmount, from: split.originalCurrency))")
+                Text(currencyManager.formatConvertedAmountSync(split.totalAmount, from: split.originalCurrency))
                     .font(.title2)
                     .bold()
                     .foregroundColor(.green)
@@ -384,7 +385,7 @@ struct SplitDetailExportView: View {
                                 .font(.headline)
                                 .bold()
                             Spacer()
-                            Text(currencyManager.formatConvertedAmount(split.userShares[user] ?? 0, from: split.originalCurrency))
+                            Text(currencyManager.formatConvertedAmountSync(split.userShares[user] ?? 0, from: split.originalCurrency))
                                 .font(.headline)
                                 .foregroundColor(.blue)
                         }
@@ -397,7 +398,7 @@ struct SplitDetailExportView: View {
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                         Spacer()
-                                        Text(currencyManager.formatConvertedAmount(itemDetail.cost, from: split.originalCurrency))
+                                        Text(currencyManager.formatConvertedAmountSync(itemDetail.cost, from: split.originalCurrency))
                                             .font(.subheadline)
                                             .foregroundColor(.green)
                                     }

@@ -54,16 +54,29 @@ struct Currency: Identifiable, Codable, Equatable {
 
 class CurrencyManager: ObservableObject {
     @Published var selectedCurrency: Currency = .default
+    @Published var isLoadingRates = false
+    @Published var lastConversionError: String?
     
     private let userDefaultsKey = "selectedCurrency"
+    private let currencyService = CurrencyService.shared
     
     init() {
         loadCurrency()
+        
+        // Fetch real-time rates on initialization
+        Task {
+            await currencyService.getAllExchangeRates()
+        }
     }
     
     func setCurrency(_ currency: Currency) {
         selectedCurrency = currency
         saveCurrency()
+        
+        // Refresh cached rates when currency changes
+        Task {
+            await currencyService.getAllExchangeRates()
+        }
     }
     
     private func loadCurrency() {
@@ -99,79 +112,150 @@ class CurrencyManager: ObservableObject {
     
     // MARK: - Currency Conversion
     
-    func convertAmount(_ amount: Double, from originalCurrency: String, to targetCurrency: String) -> Double {
+    func convertAmount(_ amount: Double, from originalCurrency: String, to targetCurrency: String) async -> Double {
         // If currencies are the same, no conversion needed
         if originalCurrency == targetCurrency {
             return amount
         }
         
-        // Get exchange rates (simplified - in a real app, you'd fetch from an API)
-        let exchangeRates = getExchangeRates()
+        // Try to get real-time exchange rate
+        if let rate = await currencyService.getExchangeRate(from: originalCurrency, to: targetCurrency) {
+            return amount * rate
+        }
         
-        // Convert to USD first (base currency)
-        let usdAmount: Double
+        // Fallback to cached rates or static rates
+        let exchangeRates = await currencyService.getAllExchangeRates()
+        let fallbackRates = exchangeRates.isEmpty ? currencyService.getFallbackRates() : exchangeRates
+        
+        // ExchangeRate-API returns rates with USD as base currency
         if originalCurrency == "USD" {
-            usdAmount = amount
-        } else if let rate = exchangeRates[originalCurrency] {
-            usdAmount = amount / rate
+            // Converting from USD to target currency
+            if targetCurrency == "USD" {
+                return amount
+            } else if let rate = fallbackRates[targetCurrency] {
+                return amount * rate
+            } else {
+                return amount // Fallback to original amount
+            }
         } else {
-            // If we don't have the exchange rate, return original amount
-            return amount
-        }
-        
-        // Convert from USD to target currency
-        if targetCurrency == "USD" {
-            return usdAmount
-        } else if let rate = exchangeRates[targetCurrency] {
-            return usdAmount * rate
-        } else {
-            // If we don't have the exchange rate, return USD amount
-            return usdAmount
+            // Converting from non-USD currency
+            if let fromRate = fallbackRates[originalCurrency] {
+                // Convert to USD first: amount / fromRate
+                let usdAmount = amount / fromRate
+                
+                if targetCurrency == "USD" {
+                    return usdAmount
+                } else if let toRate = fallbackRates[targetCurrency] {
+                    // Convert from USD to target: usdAmount * toRate
+                    return usdAmount * toRate
+                } else {
+                    return usdAmount // Fallback to USD amount
+                }
+            } else {
+                return amount // Fallback to original amount
+            }
         }
     }
     
-    func getConvertedAmount(_ amount: Double, from originalCurrency: String) -> Double {
-        return convertAmount(amount, from: originalCurrency, to: selectedCurrency.code)
+    func getConvertedAmount(_ amount: Double, from originalCurrency: String) async -> Double {
+        return await convertAmount(amount, from: originalCurrency, to: selectedCurrency.code)
     }
     
-    func formatConvertedAmount(_ amount: Double, from originalCurrency: String) -> String {
-        let convertedAmount = getConvertedAmount(amount, from: originalCurrency)
+    func formatConvertedAmount(_ amount: Double, from originalCurrency: String) async -> String {
+        let convertedAmount = await getConvertedAmount(amount, from: originalCurrency)
         return formatAmount(convertedAmount)
     }
     
-    private func getExchangeRates() -> [String: Double] {
-        // Simplified exchange rates (in a real app, fetch from an API like Fixer.io or ExchangeRate-API)
-        return [
-            "EUR": 0.85,
-            "GBP": 0.73,
-            "CAD": 1.35,
-            "AUD": 1.52,
-            "JPY": 110.0,
-            "CNY": 6.45,
-            "INR": 74.0,
-            "BRL": 5.2,
-            "MXN": 20.0,
-            "KRW": 1180.0,
-            "SGD": 1.35,
-            "HKD": 7.8,
-            "CHF": 0.92,
-            "SEK": 8.5,
-            "NOK": 8.8,
-            "DKK": 6.3,
-            "PLN": 3.9,
-            "CZK": 21.5,
-            "HUF": 300.0,
-            "RUB": 75.0,
-            "TRY": 8.5,
-            "ZAR": 14.5,
-            "ILS": 3.2,
-            "AED": 3.67,
-            "SAR": 3.75,
-            "THB": 33.0,
-            "MYR": 4.2,
-            "IDR": 14300.0,
-            "PHP": 50.0,
-            "VND": 23000.0
-        ]
+    // Synchronous versions for backward compatibility (uses cached rates)
+    func convertAmountSync(_ amount: Double, from originalCurrency: String, to targetCurrency: String) -> Double {
+        // If currencies are the same, no conversion needed
+        if originalCurrency == targetCurrency {
+            return amount
+        }
+        
+        // Use cached rates if available, otherwise fallback rates
+        let exchangeRates = !currencyService.exchangeRatesCache.isEmpty ? 
+            currencyService.exchangeRatesCache : 
+            currencyService.getFallbackRates()
+        
+        // ExchangeRate-API returns rates with USD as base currency
+        // So if we have USD -> EUR rate of 0.85, it means 1 USD = 0.85 EUR
+        
+        if originalCurrency == "USD" {
+            // Converting from USD to target currency
+            if targetCurrency == "USD" {
+                return amount
+            } else if let rate = exchangeRates[targetCurrency] {
+                let result = amount * rate
+                return result
+            } else {
+                return amount // Fallback to original amount
+            }
+        } else {
+            // Converting from non-USD currency
+            if let fromRate = exchangeRates[originalCurrency] {
+                // Convert to USD first: amount / fromRate
+                let usdAmount = amount / fromRate
+                
+                if targetCurrency == "USD" {
+                    return usdAmount
+                } else if let toRate = exchangeRates[targetCurrency] {
+                    // Convert from USD to target: usdAmount * toRate
+                    return usdAmount * toRate
+                } else {
+                    return usdAmount // Fallback to USD amount
+                }
+            } else {
+                return amount // Fallback to original amount
+            }
+        }
     }
+    
+    func getConvertedAmountSync(_ amount: Double, from originalCurrency: String) -> Double {
+        if !currencyService.exchangeRatesCache.isEmpty {
+            return convertAmountSync(amount, from: originalCurrency, to: selectedCurrency.code)
+        } else {
+            Task {
+                await currencyService.getAllExchangeRates()
+            }
+            let fallbackRates = currencyService.getFallbackRates()
+            return convertAmountWithRates(amount, from: originalCurrency, to: selectedCurrency.code, rates: fallbackRates)
+        }
+    }
+    
+    func formatConvertedAmountSync(_ amount: Double, from originalCurrency: String) -> String {
+        let convertedAmount = getConvertedAmountSync(amount, from: originalCurrency)
+        return formatAmount(convertedAmount)
+    }
+    
+    private func convertAmountWithRates(_ amount: Double, from originalCurrency: String, to targetCurrency: String, rates: [String: Double]) -> Double {
+        if originalCurrency == targetCurrency {
+            return amount
+        }
+        
+        if originalCurrency == "USD" {
+            if targetCurrency == "USD" {
+                return amount
+            } else if let rate = rates[targetCurrency] {
+                return amount * rate
+            } else {
+                return amount
+            }
+        } else {
+            if let fromRate = rates[originalCurrency] {
+                let usdAmount = amount / fromRate
+                
+                if targetCurrency == "USD" {
+                    return usdAmount
+                } else if let toRate = rates[targetCurrency] {
+                    return usdAmount * toRate
+                } else {
+                    return usdAmount
+                }
+            } else {
+                return amount
+            }
+        }
+    }
+    
 }

@@ -8,6 +8,7 @@ struct HomeView: View {
     @State private var showNewSplit = false
     @State private var showQuickSplit = false
     
+    
     private var uniquePeopleThisMonth: Int {
         let calendar = Calendar.current
         let now = Date()
@@ -81,6 +82,7 @@ struct HomeView: View {
             funFactsManager.generateFunFact(from: splitHistoryManager.pastSplits)
         }
     }
+    
 }
 
 // Recent Splits Section with Card Style
@@ -155,7 +157,7 @@ struct StatisticsDashboard: View {
     
     private var totalMonthlySpending: Double {
         selectedMonthSplits.reduce(0) { total, split in
-            total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+            total + currencyManager.getConvertedAmountSync(split.totalAmount, from: split.originalCurrency)
         }
     }
     
@@ -183,8 +185,8 @@ struct StatisticsDashboard: View {
             let fullAmount = split.totalAmount
             
             // Convert both amounts to current currency
-            let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
-            let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+            let convertedFullAmount = currencyManager.getConvertedAmountSync(fullAmount, from: split.originalCurrency)
+            let convertedYourShare = currencyManager.getConvertedAmountSync(yourShare, from: split.originalCurrency)
             
             return total + (convertedFullAmount - convertedYourShare)
         }

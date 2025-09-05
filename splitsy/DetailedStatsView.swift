@@ -103,7 +103,7 @@ struct DetailedStatsView: View {
                 switch statType {
                 case .totalSpent:
                     value = weekSplits.reduce(0) { total, split in
-                        total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+                        total + currencyManager.getConvertedAmountSync(split.totalAmount, from: split.originalCurrency)
                     }
                 case .moneySaved:
                     value = weekSplits.reduce(0) { total, split in
@@ -111,8 +111,8 @@ struct DetailedStatsView: View {
                         let fullAmount = split.totalAmount
                         
                         // Convert both amounts to current currency
-                        let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
-                        let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+                        let convertedFullAmount = currencyManager.getConvertedAmountSync(fullAmount, from: split.originalCurrency)
+                        let convertedYourShare = currencyManager.getConvertedAmountSync(yourShare, from: split.originalCurrency)
                         
                         return total + (convertedFullAmount - convertedYourShare)
                     }
@@ -149,7 +149,7 @@ struct DetailedStatsView: View {
                 switch statType {
                 case .totalSpent:
                     value = monthSplits.reduce(0) { total, split in
-                        total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+                        total + currencyManager.getConvertedAmountSync(split.totalAmount, from: split.originalCurrency)
                     }
                 case .moneySaved:
                     value = monthSplits.reduce(0) { total, split in
@@ -157,8 +157,8 @@ struct DetailedStatsView: View {
                         let fullAmount = split.totalAmount
                         
                         // Convert both amounts to current currency
-                        let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
-                        let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+                        let convertedFullAmount = currencyManager.getConvertedAmountSync(fullAmount, from: split.originalCurrency)
+                        let convertedYourShare = currencyManager.getConvertedAmountSync(yourShare, from: split.originalCurrency)
                         
                         return total + (convertedFullAmount - convertedYourShare)
                     }
@@ -189,7 +189,7 @@ struct DetailedStatsView: View {
                     switch statType {
                     case .totalSpent:
                         value = monthSplits.reduce(0) { total, split in
-                            total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+                            total + currencyManager.getConvertedAmountSync(split.totalAmount, from: split.originalCurrency)
                         }
                     case .moneySaved:
                         value = monthSplits.reduce(0) { total, split in
@@ -197,8 +197,8 @@ struct DetailedStatsView: View {
                             let fullAmount = split.totalAmount
                             
                             // Convert both amounts to current currency
-                            let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
-                            let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+                            let convertedFullAmount = currencyManager.getConvertedAmountSync(fullAmount, from: split.originalCurrency)
+                            let convertedYourShare = currencyManager.getConvertedAmountSync(yourShare, from: split.originalCurrency)
                             
                             return total + (convertedFullAmount - convertedYourShare)
                         }

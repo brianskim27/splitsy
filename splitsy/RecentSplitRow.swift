@@ -5,6 +5,7 @@ struct RecentSplitRow: View {
     @State private var showDetail = false
     @State private var isPressed = false
     @EnvironmentObject var currencyManager: CurrencyManager
+    
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -18,7 +19,7 @@ struct RecentSplitRow: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                Text(currencyManager.formatConvertedAmount(split.totalAmount, from: split.originalCurrency))
+                Text(currencyManager.formatConvertedAmountSync(split.totalAmount, from: split.originalCurrency))
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.green)
@@ -56,4 +57,5 @@ struct RecentSplitRow: View {
             SplitDetailView(split: split)
         }
     }
+    
 }

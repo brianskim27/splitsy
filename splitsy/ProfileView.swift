@@ -350,7 +350,7 @@ struct ProfileView: View {
     // MARK: - Computed Properties
     private var totalSpent: Double {
         splitHistoryManager.pastSplits.reduce(0) { total, split in
-            total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+            total + currencyManager.getConvertedAmountSync(split.totalAmount, from: split.originalCurrency)
         }
     }
     
@@ -360,8 +360,8 @@ struct ProfileView: View {
             let fullAmount = split.totalAmount
             
             // Convert both amounts to current currency
-            let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
-            let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+            let convertedFullAmount = currencyManager.getConvertedAmountSync(fullAmount, from: split.originalCurrency)
+            let convertedYourShare = currencyManager.getConvertedAmountSync(yourShare, from: split.originalCurrency)
             
             return total + (convertedFullAmount - convertedYourShare)
         }
