@@ -74,6 +74,7 @@ enum Impact: String, CaseIterable {
 
 struct FeedbackView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var feedbackType: FeedbackType = .general
     @State private var priority: PriorityLevel = .medium
     @State private var description: String = ""
@@ -81,7 +82,6 @@ struct FeedbackView: View {
     @State private var userJourney: UserJourney? = nil
     @State private var frequency: Frequency? = nil
     @State private var impact: Impact? = nil
-    @State private var contactEmail: String = ""
     @State private var additionalComments: String = ""
     @State private var isSubmitting = false
     @State private var showSuccessAlert = false
@@ -117,9 +117,6 @@ struct FeedbackView: View {
                     if feedbackType == .feature {
                         conditionalFeatureQuestions
                     }
-                    
-                    // Contact Information
-                    contactSection
                     
                     // Screenshots
                     screenshotsSection
@@ -388,22 +385,6 @@ struct FeedbackView: View {
         }
     }
     
-    private var contactSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Contact Information (Optional)")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            TextField("Email for follow-up", text: $contactEmail)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
-            
-            Text("We'll only use this to follow up on your feedback if needed.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
     
     private var screenshotsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -627,10 +608,6 @@ struct FeedbackView: View {
             emailBody += "\nImpact: \(imp.rawValue)"
         }
         
-        if !contactEmail.isEmpty {
-            emailBody += "\nContact Email: \(contactEmail)"
-        }
-        
         if !additionalComments.isEmpty {
             emailBody += "\n\nAdditional Comments:\n\(additionalComments)"
         }
@@ -664,6 +641,11 @@ struct FeedbackView: View {
     }
     
     private func sendFeedbackToAPI(content: (subject: String, body: String)) async throws -> Bool {
+        // Get user information
+        let userDisplayName = authManager.currentUser?.name ?? "Unknown User"
+        let userEmail = authManager.currentUser?.email ?? "unknown@example.com"
+        let userUsername = authManager.currentUser?.username ?? "unknown"
+        
         // Create the feedback data structure
         let feedbackData = FeedbackSubmission(
             feedbackType: feedbackType.rawValue,
@@ -673,9 +655,11 @@ struct FeedbackView: View {
             userJourney: userJourney?.rawValue,
             frequency: frequency?.rawValue,
             impact: impact?.rawValue,
-            contactEmail: contactEmail.isEmpty ? nil : contactEmail,
             additionalComments: additionalComments.isEmpty ? nil : additionalComments,
-            attachedImages: attachedImages
+            attachedImages: attachedImages,
+            userDisplayName: userDisplayName,
+            userEmail: userEmail,
+            userUsername: userUsername
         )
         
         // Convert to JSON
@@ -717,13 +701,16 @@ struct FeedbackSubmission: Codable {
     let userJourney: String?
     let frequency: String?
     let impact: String?
-    let contactEmail: String?
     let additionalComments: String?
     let attachedImages: [String] // Base64 encoded image strings
+    let userDisplayName: String
+    let userEmail: String
+    let userUsername: String
     
     init(feedbackType: String, priority: String, description: String, deviceInfo: String, 
          userJourney: String?, frequency: String?, impact: String?, 
-         contactEmail: String?, additionalComments: String?, attachedImages: [UIImage]) {
+         additionalComments: String?, attachedImages: [UIImage], 
+         userDisplayName: String, userEmail: String, userUsername: String) {
         self.feedbackType = feedbackType
         self.priority = priority
         self.description = description
@@ -731,8 +718,10 @@ struct FeedbackSubmission: Codable {
         self.userJourney = userJourney
         self.frequency = frequency
         self.impact = impact
-        self.contactEmail = contactEmail
         self.additionalComments = additionalComments
+        self.userDisplayName = userDisplayName
+        self.userEmail = userEmail
+        self.userUsername = userUsername
         
         // Convert UIImage array to base64 string array
         self.attachedImages = attachedImages.compactMap { image in
