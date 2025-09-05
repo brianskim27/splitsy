@@ -1,6 +1,6 @@
 # 🧾 Splitsy
 
-**Split bills effortlessly with AI-powered receipt scanning**
+**Because math shouldn't ruin your dinner plans**
 
 Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting. Simply take a photo of your receipt, and our AI-powered system will automatically parse items and prices, allowing you to assign each item to your party members in seconds.
 
