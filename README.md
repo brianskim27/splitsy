@@ -15,7 +15,7 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 - **Tap to Assign**: Easily assign items to different people
 - **Real-time Calculations**: Instant updates as you assign items
 - **Tip Management**: Add tips with percentage or fixed amount options
-- **Manage Currencies**: Change and convert currencies in real-time
+- **Multi-Currency Support**: Change and convert currencies in real-time with live rates
 - **Multiple Payment Methods**: Support for various splitting scenarios (coming soon)
 
 ### 🎨 **Modern UI/UX**
