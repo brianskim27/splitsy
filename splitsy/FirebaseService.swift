@@ -630,7 +630,8 @@ class FirebaseService: ObservableObject {
                             "cost": $0.cost
                         ] }
                     },
-                    "receiptImageData": imageDataString
+                    "receiptImageData": imageDataString,
+                    "originalCurrency": split.originalCurrency
                 ])
             }
         } catch {
@@ -698,7 +699,8 @@ class FirebaseService: ObservableObject {
                     totalAmount: totalAmount,
                     userShares: userShares,
                     detailedBreakdown: detailedBreakdown,
-                    receiptImage: receiptImage
+                    receiptImage: receiptImage,
+                    originalCurrency: data["originalCurrency"] as? String ?? "USD"
                 )
                 
                 splits.append(split)
@@ -730,7 +732,8 @@ class FirebaseService: ObservableObject {
                         username: userData["username"] as? String ?? "",
                         createdAt: (userData["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         usernameLastChanged: (userData["usernameLastChanged"] as? Timestamp)?.dateValue(),
-                        profilePictureURL: userData["profilePictureURL"] as? String
+                        profilePictureURL: userData["profilePictureURL"] as? String,
+                        preferredCurrency: userData["preferredCurrency"] as? String ?? "USD"
                     )
                     
                     DispatchQueue.main.async {
@@ -991,6 +994,26 @@ class FirebaseService: ObservableObject {
                 self.errorMessage = "Failed to remove profile picture: \(error.localizedDescription)"
                 self.isLoading = false
             }
+        }
+    }
+    
+    func updateUser(_ user: User) async throws {
+        let userData: [String: Any] = [
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "username": user.username,
+            "createdAt": Timestamp(date: user.createdAt),
+            "usernameLastChanged": user.usernameLastChanged != nil ? Timestamp(date: user.usernameLastChanged!) : NSNull(),
+            "profilePictureURL": user.profilePictureURL as Any,
+            "assignedItemIDs": user.assignedItemIDs.map { $0.uuidString },
+            "preferredCurrency": user.preferredCurrency
+        ]
+        
+        try await db.collection("users").document(user.id).setData(userData, merge: true)
+        
+        DispatchQueue.main.async {
+            self.currentUser = user
         }
     }
 }

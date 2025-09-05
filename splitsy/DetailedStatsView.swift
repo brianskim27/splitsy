@@ -5,6 +5,7 @@ struct DetailedStatsView: View {
     let splitHistoryManager: SplitHistoryManager
     let statType: StatType
     let selectedMonth: Date
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var selectedPeriod: TimePeriod = .selectedMonth
     @State private var showPeriodDropdown = false
     @State private var selectedDataPoint: MonthData?
@@ -101,12 +102,19 @@ struct DetailedStatsView: View {
                 let value: Double
                 switch statType {
                 case .totalSpent:
-                    value = weekSplits.reduce(0) { $0 + $1.totalAmount }
+                    value = weekSplits.reduce(0) { total, split in
+                        total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+                    }
                 case .moneySaved:
                     value = weekSplits.reduce(0) { total, split in
                         let yourShare = split.userShares["Brian"] ?? 0
                         let fullAmount = split.totalAmount
-                        return total + (fullAmount - yourShare)
+                        
+                        // Convert both amounts to current currency
+                        let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
+                        let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+                        
+                        return total + (convertedFullAmount - convertedYourShare)
                     }
                 case .splits:
                     value = Double(weekSplits.count)
@@ -140,12 +148,19 @@ struct DetailedStatsView: View {
                 let value: Double
                 switch statType {
                 case .totalSpent:
-                    value = monthSplits.reduce(0) { $0 + $1.totalAmount }
+                    value = monthSplits.reduce(0) { total, split in
+                        total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+                    }
                 case .moneySaved:
                     value = monthSplits.reduce(0) { total, split in
                         let yourShare = split.userShares["Brian"] ?? 0
                         let fullAmount = split.totalAmount
-                        return total + (fullAmount - yourShare)
+                        
+                        // Convert both amounts to current currency
+                        let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
+                        let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+                        
+                        return total + (convertedFullAmount - convertedYourShare)
                     }
                 case .splits:
                     value = Double(monthSplits.count)
@@ -173,12 +188,19 @@ struct DetailedStatsView: View {
                     let value: Double
                     switch statType {
                     case .totalSpent:
-                        value = monthSplits.reduce(0) { $0 + $1.totalAmount }
+                        value = monthSplits.reduce(0) { total, split in
+                            total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+                        }
                     case .moneySaved:
                         value = monthSplits.reduce(0) { total, split in
                             let yourShare = split.userShares["Brian"] ?? 0
                             let fullAmount = split.totalAmount
-                            return total + (fullAmount - yourShare)
+                            
+                            // Convert both amounts to current currency
+                            let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
+                            let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+                            
+                            return total + (convertedFullAmount - convertedYourShare)
                         }
                     case .splits:
                         value = Double(monthSplits.count)
@@ -594,7 +616,7 @@ struct DetailedStatsView: View {
     private func formatValue(_ value: Double) -> String {
         switch statType {
         case .totalSpent, .moneySaved:
-            return String(format: "$%.2f", value)
+            return currencyManager.formatAmount(value)
         case .splits, .people:
             return String(format: "%.0f", value)
         }

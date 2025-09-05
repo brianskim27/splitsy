@@ -4,6 +4,7 @@ struct ItemAssignmentView: View {
     @Binding var items: [ReceiptItem] // Items to assign
     @Binding var users: [User] // Users and their assignments
     var onComplete: (([String: Double], [String: [ItemDetail]]) -> Void)? = nil
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var newUserName: String = ""
     @State private var errorMessage: String? = nil
     @State private var userShares: [String: Double] = [:]
@@ -200,7 +201,7 @@ struct ItemAssignmentView: View {
                             VStack(alignment: .leading, spacing: 16) {
                                 // Tip amount input
                                 HStack {
-                                    Text("$")
+                                    Text(currencyManager.selectedCurrency.symbol)
                                         .font(.title2)
                                         .fontWeight(.semibold)
                                         .foregroundColor(.secondary)
@@ -649,6 +650,7 @@ struct ItemAssignmentCard: View {
     @Binding var items: [ReceiptItem]
     let onAssignmentChange: () -> Void
     @State private var showAssignments = false
+    @EnvironmentObject var currencyManager: CurrencyManager
     
     var body: some View {
         VStack(spacing: 12) {
@@ -664,7 +666,7 @@ struct ItemAssignmentCard: View {
                         .multilineTextAlignment(.center)
                         .frame(height: 32)
                     
-                    Text("$\(item.cost, specifier: "%.2f")")
+                    Text(currencyManager.formatAmount(item.cost))
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(.green)

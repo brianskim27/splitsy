@@ -205,4 +205,20 @@ class AuthenticationManager: ObservableObject {
             await firebaseService.cancelIncompleteSignup()
         }
     }
+    
+    func updateUserCurrency(_ currencyCode: String) async {
+        guard var user = currentUser else { return }
+        
+        user.preferredCurrency = currencyCode
+        
+        do {
+            try await firebaseService.updateUser(user)
+            let updatedUser = user // Capture the value before the async operation
+            await MainActor.run {
+                self.currentUser = updatedUser
+            }
+        } catch {
+            print("Error updating user currency: \(error)")
+        }
+    }
 }

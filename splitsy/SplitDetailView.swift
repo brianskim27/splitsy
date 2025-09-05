@@ -4,6 +4,7 @@ import LinkPresentation
 
 struct SplitDetailView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var currencyManager: CurrencyManager
     let split: Split
     @State private var showFullScreen = false
     @State private var isPreparingShare = false
@@ -47,7 +48,7 @@ struct SplitDetailView: View {
                         Text(split.date, style: .date)
                             .font(.callout)
                             .foregroundColor(.secondary)
-                        Text("Total: $\(split.totalAmount, specifier: "%.2f")")
+                        Text("Total: \(currencyManager.formatConvertedAmount(split.totalAmount, from: split.originalCurrency))")
                             .font(.title2)
                             .bold()
                             .foregroundColor(.green)
@@ -63,7 +64,7 @@ struct SplitDetailView: View {
                                     .font(.headline)
                                     .bold()
                                 Spacer()
-                                Text("$\(split.userShares[user] ?? 0, specifier: "%.2f")")
+                                Text(currencyManager.formatConvertedAmount(split.userShares[user] ?? 0, from: split.originalCurrency))
                                     .font(.headline)
                                     .foregroundColor(.blue)
                             }
@@ -75,7 +76,7 @@ struct SplitDetailView: View {
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                         Spacer()
-                                        Text("$\(itemDetail.cost, specifier: "%.2f")")
+                                        Text(currencyManager.formatConvertedAmount(itemDetail.cost, from: split.originalCurrency))
                                             .font(.subheadline)
                                             .foregroundColor(.green)
                                     }
@@ -346,6 +347,7 @@ class SplitDetailImageActivityItemSource: NSObject, UIActivityItemSource {
 // MARK: - Exportable View
 struct SplitDetailExportView: View {
     let split: Split
+    @EnvironmentObject var currencyManager: CurrencyManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -366,7 +368,7 @@ struct SplitDetailExportView: View {
                 Text(split.date, style: .date)
                     .font(.callout)
                     .foregroundColor(.secondary)
-                Text("Total: $\(split.totalAmount, specifier: "%.2f")")
+                Text("Total: \(currencyManager.formatConvertedAmount(split.totalAmount, from: split.originalCurrency))")
                     .font(.title2)
                     .bold()
                     .foregroundColor(.green)
@@ -382,7 +384,7 @@ struct SplitDetailExportView: View {
                                 .font(.headline)
                                 .bold()
                             Spacer()
-                            Text("$\(split.userShares[user] ?? 0, specifier: "%.2f")")
+                            Text(currencyManager.formatConvertedAmount(split.userShares[user] ?? 0, from: split.originalCurrency))
                                 .font(.headline)
                                 .foregroundColor(.blue)
                         }
@@ -395,7 +397,7 @@ struct SplitDetailExportView: View {
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                         Spacer()
-                                        Text("$\(itemDetail.cost, specifier: "%.2f")")
+                                        Text(currencyManager.formatConvertedAmount(itemDetail.cost, from: split.originalCurrency))
                                             .font(.subheadline)
                                             .foregroundColor(.green)
                                     }
@@ -420,6 +422,7 @@ extension SplitDetailView {
     @MainActor
     private func renderSplitAsImage() -> UIImage? {
         let exportView = SplitDetailExportView(split: split)
+            .environmentObject(currencyManager)
             .padding(16)
             .frame(width: 900, alignment: .center)
             .background(Color(.systemBackground))

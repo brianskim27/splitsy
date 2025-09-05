@@ -9,9 +9,10 @@ struct User: Identifiable, Codable {
     var usernameLastChanged: Date?
     var profilePictureURL: String?
     var assignedItemIDs: [UUID] = [] // List of ReceiptItem IDs
+    var preferredCurrency: String = "USD" // Default to USD
     
     enum CodingKeys: String, CodingKey {
-        case id, email, name, username, createdAt, usernameLastChanged, profilePictureURL, assignedItemIDs
+        case id, email, name, username, createdAt, usernameLastChanged, profilePictureURL, assignedItemIDs, preferredCurrency
     }
     
     // Check if username can be changed (7 days since last change)

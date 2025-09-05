@@ -34,7 +34,7 @@ struct LoginView: View {
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                             
-                            Text("Snap, split, done")
+                            Text("Because math shouldn't ruin your dinner plans")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }

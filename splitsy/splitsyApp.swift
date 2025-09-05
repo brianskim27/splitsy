@@ -7,6 +7,7 @@ struct SplitsyApp: App {
     @StateObject private var splitHistoryManager = SplitHistoryManager()
     @StateObject private var funFactsManager = FunFactsManager()
     @StateObject private var authManager = AuthenticationManager()
+    @StateObject private var currencyManager = CurrencyManager()
     
     var body: some Scene {
         WindowGroup {
@@ -21,11 +22,17 @@ struct SplitsyApp: App {
                             .environmentObject(splitHistoryManager)
                             .environmentObject(funFactsManager)
                             .environmentObject(authManager)
+                            .environmentObject(currencyManager)
                             .onAppear {
                                 splitHistoryManager.setAuthManager(authManager)
                                 // Set up callback to clear data when user signs out
                                 authManager.onSignOut = {
                                     splitHistoryManager.clearData()
+                                }
+                                // Load user's preferred currency
+                                if let user = authManager.currentUser,
+                                   let currency = Currency.supportedCurrencies.first(where: { $0.code == user.preferredCurrency }) {
+                                    currencyManager.setCurrency(currency)
                                 }
                             }
                     }

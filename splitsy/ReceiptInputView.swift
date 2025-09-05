@@ -6,6 +6,7 @@ struct ReceiptInputView: View {
     @Binding var receiptImage: UIImage?
     @Binding var parsedItems: [ReceiptItem]
     var onNext: (([ReceiptItem]) -> Void)? = nil
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var detectedTexts: [(id: UUID, text: String, box: CGRect)] = [] // Detected texts with unique IDs
     @State private var isPickerPresented = false // Open picker at start
     @State private var isNavigatingToAssignmentView = false // Tracks navigation
@@ -131,7 +132,7 @@ struct ReceiptInputView: View {
                                                     .multilineTextAlignment(.center)
                                                     
                                                     HStack(spacing: 2) {
-                                                        Text("$")
+                                                        Text(currencyManager.selectedCurrency.symbol)
                                                             .foregroundColor(.green)
                                                             .font(.caption)
                                                             .fontWeight(.medium)
@@ -156,7 +157,7 @@ struct ReceiptInputView: View {
                                                         .multilineTextAlignment(.center)
                                                         .frame(height: 32)
                                                     
-                                                    Text("$\(item.cost, specifier: "%.2f")")
+                                                    Text(currencyManager.formatAmount(item.cost))
                                                         .font(.title3)
                                                         .fontWeight(.bold)
                                                         .foregroundColor(.green)
@@ -591,8 +592,16 @@ struct ReceiptInputView: View {
             
             if priceRegex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil {
                 let priceText = text.replacingOccurrences(of: ",", with: ".")
-                if let priceValue = Double(priceText.replacingOccurrences(of: "$", with: "").trimmingCharacters(in: .whitespaces)) {
-                    priceCandidates.append((text: String(format: "$%.2f", priceValue), box: detectedText.box))
+                // Remove common currency symbols
+                let cleanedPrice = priceText.replacingOccurrences(of: "$", with: "")
+                    .replacingOccurrences(of: "€", with: "")
+                    .replacingOccurrences(of: "£", with: "")
+                    .replacingOccurrences(of: "¥", with: "")
+                    .replacingOccurrences(of: "₹", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+                
+                if let priceValue = Double(cleanedPrice) {
+                    priceCandidates.append((text: currencyManager.formatAmount(priceValue), box: detectedText.box))
                 }
             } else {
                 textCandidates.append(detectedText)

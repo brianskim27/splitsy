@@ -4,6 +4,7 @@ import LinkPresentation
 // MARK: - Quick Split Main View
 struct QuickSplitView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var peopleCount = 2
     @State private var items: [SplitItem] = []
     @State private var showAddItem = false
@@ -113,9 +114,17 @@ struct QuickSplitView: View {
                                                     .font(.caption)
                                                     .foregroundColor(.secondary)
                                                 Spacer()
-                                                Text("$\(item.price, specifier: "%.2f")")
+                                                Text(currencyManager.formatAmount(item.price))
                                                     .font(.caption)
                                                     .foregroundColor(.green)
+                                                
+                                                Button(action: {
+                                                    removeItemFromPerson(itemId: item.id, personIndex: index)
+                                                }) {
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .font(.caption)
+                                                        .foregroundColor(.red)
+                                                }
                                             }
                                         }
                                     }
@@ -184,7 +193,7 @@ struct QuickSplitView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             // Tax amount input
                             HStack {
-                                Text("$")
+                                Text(currencyManager.selectedCurrency.symbol)
                                     .font(.title2)
                                     .fontWeight(.semibold)
                                     .foregroundColor(.secondary)
@@ -286,7 +295,7 @@ struct QuickSplitView: View {
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Text("$\(subtotal, specifier: "%.2f")")
+                                Text(currencyManager.formatAmount(subtotal))
                                     .font(.subheadline)
                                     .foregroundColor(.primary)
                             }
@@ -297,7 +306,7 @@ struct QuickSplitView: View {
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                     Spacer()
-                                    Text("$\(tax, specifier: "%.2f")")
+                                    Text(currencyManager.formatAmount(tax))
                                         .font(.subheadline)
                                         .foregroundColor(.primary)
                                 }
@@ -311,7 +320,7 @@ struct QuickSplitView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.primary)
                                 Spacer()
-                                Text("$\(total, specifier: "%.2f")")
+                                Text(currencyManager.formatAmount(total))
                                     .font(.headline)
                                     .fontWeight(.bold)
                                     .foregroundColor(.green)
@@ -346,7 +355,7 @@ struct QuickSplitView: View {
         }
         .alert("Add Item", isPresented: $showAddItem) {
             TextField("Item name", text: $newItemName)
-            TextField("Price", text: $newItemPrice)
+            TextField("Price (\(currencyManager.selectedCurrency.symbol))", text: $newItemPrice)
                 .keyboardType(.decimalPad)
             Button("Add") {
                 addItem()
@@ -404,6 +413,17 @@ struct QuickSplitView: View {
         items.removeAll { $0.id == item.id }
         itemAssignments.removeValue(forKey: item.id)
     }
+    
+    private func removeItemFromPerson(itemId: UUID, personIndex: Int) {
+        if var currentAssignments = itemAssignments[itemId] {
+            currentAssignments.remove(personIndex)
+            if currentAssignments.isEmpty {
+                itemAssignments.removeValue(forKey: itemId)
+            } else {
+                itemAssignments[itemId] = currentAssignments
+            }
+        }
+    }
 }
 
 // MARK: - Supporting Models and Views
@@ -418,6 +438,7 @@ struct QuickSplitItemRow: View {
     let people: [String]
     @Binding var assignments: Set<Int>
     let onDelete: () -> Void
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var showAssignments = false
     
     var body: some View {
@@ -428,7 +449,7 @@ struct QuickSplitItemRow: View {
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text("$\(item.price, specifier: "%.2f")")
+                    Text(currencyManager.formatAmount(item.price))
                         .font(.subheadline)
                         .foregroundColor(.green)
                 }
@@ -526,6 +547,7 @@ struct QuickSplitReviewView: View {
     let total: Double
     let onBack: () -> Void
     let onDone: () -> Void
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var isPreparingShare = false
     
     private var userShares: [String: Double] {
@@ -637,7 +659,7 @@ struct QuickSplitReviewView: View {
                     Text(Date(), style: .date)
                         .font(.callout)
                         .foregroundColor(.secondary)
-                    Text("Total: $\(total, specifier: "%.2f")")
+                    Text("Total: \(currencyManager.formatAmount(total))")
                         .font(.title2)
                         .bold()
                         .foregroundColor(.green)
@@ -653,7 +675,7 @@ struct QuickSplitReviewView: View {
                                 .font(.headline)
                                 .bold()
                             Spacer()
-                            Text("$\(userShares[person] ?? 0, specifier: "%.2f")")
+                            Text(currencyManager.formatAmount(userShares[person] ?? 0))
                                 .font(.headline)
                                 .foregroundColor(.blue)
                         }
@@ -665,7 +687,7 @@ struct QuickSplitReviewView: View {
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                     Spacer()
-                                    Text("$\(itemDetail.cost, specifier: "%.2f")")
+                                    Text(currencyManager.formatAmount(itemDetail.cost))
                                         .font(.subheadline)
                                         .foregroundColor(.green)
                                 }
@@ -747,6 +769,7 @@ struct QuickSplitReviewView: View {
             detailedBreakdown: detailedBreakdown,
             total: total
         )
+        .environmentObject(currencyManager)
         .padding(16)
         .frame(width: 900, alignment: .center)
         .background(Color(.systemBackground))
@@ -782,6 +805,7 @@ struct QuickSplitExportView: View {
     let userShares: [String: Double]
     let detailedBreakdown: [String: [ItemDetail]]
     let total: Double
+    @EnvironmentObject var currencyManager: CurrencyManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -792,7 +816,7 @@ struct QuickSplitExportView: View {
                 Text(Date(), style: .date)
                     .font(.callout)
                     .foregroundColor(.secondary)
-                Text("Total: $\(total, specifier: "%.2f")")
+                Text("Total: \(currencyManager.formatAmount(total))")
                     .font(.title2)
                     .bold()
                     .foregroundColor(.green)
@@ -808,7 +832,7 @@ struct QuickSplitExportView: View {
                                 .font(.headline)
                                 .bold()
                             Spacer()
-                            Text("$\(userShares[person] ?? 0, specifier: "%.2f")")
+                            Text(currencyManager.formatAmount(userShares[person] ?? 0))
                                 .font(.headline)
                                 .foregroundColor(.blue)
                         }
@@ -821,7 +845,7 @@ struct QuickSplitExportView: View {
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                         Spacer()
-                                        Text("$\(itemDetail.cost, specifier: "%.2f")")
+                                        Text(currencyManager.formatAmount(itemDetail.cost))
                                             .font(.subheadline)
                                             .foregroundColor(.green)
                                     }

@@ -14,12 +14,13 @@ struct Split: Identifiable, Codable, Equatable {
     let userShares: [String: Double]
     let detailedBreakdown: [String: [ItemDetail]]
     var receiptImageData: Data?
+    let originalCurrency: String // Currency when the split was created
     
     enum CodingKeys: String, CodingKey {
-        case id, description, date, totalAmount, userShares, detailedBreakdown, receiptImageData
+        case id, description, date, totalAmount, userShares, detailedBreakdown, receiptImageData, originalCurrency
     }
     
-    init(id: UUID = UUID(), description: String? = nil, date: Date = Date(), totalAmount: Double, userShares: [String: Double], detailedBreakdown: [String: [ItemDetail]], receiptImage: UIImage? = nil) {
+    init(id: UUID = UUID(), description: String? = nil, date: Date = Date(), totalAmount: Double, userShares: [String: Double], detailedBreakdown: [String: [ItemDetail]], receiptImage: UIImage? = nil, originalCurrency: String = "USD") {
         self.id = id
         self.description = description
         self.date = date
@@ -27,5 +28,6 @@ struct Split: Identifiable, Codable, Equatable {
         self.userShares = userShares
         self.detailedBreakdown = detailedBreakdown
         self.receiptImageData = receiptImage?.jpegData(compressionQuality: 0.8)
+        self.originalCurrency = originalCurrency
     }
 }

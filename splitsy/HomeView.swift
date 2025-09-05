@@ -4,6 +4,7 @@ struct HomeView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @EnvironmentObject var funFactsManager: FunFactsManager
     @EnvironmentObject var authManager: AuthenticationManager
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var showNewSplit = false
     @State private var showQuickSplit = false
     
@@ -119,6 +120,7 @@ struct RecentSplitsSection: View {
 // Statistics Dashboard
 struct StatisticsDashboard: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var selectedDate = Date()
     @State private var showMonthPicker = false
     @State private var animateButton = false
@@ -152,7 +154,9 @@ struct StatisticsDashboard: View {
     }
     
     private var totalMonthlySpending: Double {
-        selectedMonthSplits.reduce(0) { $0 + $1.totalAmount }
+        selectedMonthSplits.reduce(0) { total, split in
+            total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+        }
     }
     
     private var averageSplitAmount: Double {
@@ -177,7 +181,12 @@ struct StatisticsDashboard: View {
         selectedMonthSplits.reduce(0) { total, split in
             let yourShare = split.userShares["Brian"] ?? 0
             let fullAmount = split.totalAmount
-            return total + (fullAmount - yourShare)
+            
+            // Convert both amounts to current currency
+            let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
+            let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+            
+            return total + (convertedFullAmount - convertedYourShare)
         }
     }
     
@@ -235,7 +244,7 @@ struct StatisticsDashboard: View {
                 ], spacing: 12) {
                                     StatCard(
                     title: "Total Spent",
-                    value: String(format: "$%.2f", totalMonthlySpending),
+                    value: currencyManager.formatAmount(totalMonthlySpending),
                     icon: "dollarsign.circle.fill",
                     color: .green,
                     statType: .totalSpent,
@@ -244,7 +253,7 @@ struct StatisticsDashboard: View {
                 
                 StatCard(
                     title: "Money Saved",
-                    value: String(format: "$%.2f", moneySaved),
+                    value: currencyManager.formatAmount(moneySaved),
                     icon: "arrow.down.circle.fill",
                     color: .blue,
                     statType: .moneySaved,
@@ -276,7 +285,7 @@ struct StatisticsDashboard: View {
                         InsightRow(
                             icon: "chart.line.uptrend.xyaxis",
                             title: "Average Split",
-                            value: String(format: "$%.2f", averageSplitAmount)
+                            value: currencyManager.formatAmount(averageSplitAmount)
                         )
                         
                         if let partner = mostFrequentPartner {
@@ -339,9 +348,11 @@ struct StatCard: View {
     let statType: DetailedStatsView.StatType
     let selectedDate: Date
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
+    @EnvironmentObject var currencyManager: CurrencyManager
     
     var body: some View {
-        NavigationLink(destination: DetailedStatsView(splitHistoryManager: splitHistoryManager, statType: statType, selectedMonth: selectedDate)) {
+        NavigationLink(destination: DetailedStatsView(splitHistoryManager: splitHistoryManager, statType: statType, selectedMonth: selectedDate)
+            .environmentObject(currencyManager)) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: icon)
@@ -494,6 +505,7 @@ struct RoundedCorner: Shape {
         return Path(path.cgPath)
     }
 }
+
 
 // Store Model with Distance Calculation
 struct Store: Identifiable {

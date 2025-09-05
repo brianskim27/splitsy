@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @EnvironmentObject var authManager: AuthenticationManager
+    @EnvironmentObject var currencyManager: CurrencyManager
     @State private var showNewSplit = false
     @State private var showHistory = false
     @State private var showHistoryFullScreen = false
@@ -13,6 +14,7 @@ struct ProfileView: View {
     @State private var showHelpSupport = false
     @State private var showDataExport = false
     @State private var showFeedback = false
+    @State private var showCurrencySelection = false
 
     var body: some View {
         ScrollView {
@@ -63,6 +65,11 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showFeedback) {
             FeedbackView()
+        }
+        .sheet(isPresented: $showCurrencySelection) {
+            CurrencySelectionView()
+                .environmentObject(currencyManager)
+                .environmentObject(authManager)
         }
         .fullScreenCover(isPresented: $showNewSplit) {
             NewSplitFlowView()
@@ -252,6 +259,15 @@ struct ProfileView: View {
                 }
                 
                 ProfileButton(
+                    title: "Currency",
+                    subtitle: "\(currencyManager.selectedCurrency.symbol) \(currencyManager.selectedCurrency.name)",
+                    icon: "dollarsign.circle",
+                    color: .green
+                ) {
+                    showCurrencySelection = true
+                }
+                
+                ProfileButton(
                     title: "Notifications",
                     subtitle: "Configure notification preferences",
                     icon: "bell",
@@ -333,14 +349,21 @@ struct ProfileView: View {
     
     // MARK: - Computed Properties
     private var totalSpent: Double {
-        splitHistoryManager.pastSplits.reduce(0) { $0 + $1.totalAmount }
+        splitHistoryManager.pastSplits.reduce(0) { total, split in
+            total + currencyManager.getConvertedAmount(split.totalAmount, from: split.originalCurrency)
+        }
     }
     
     private var moneySaved: Double {
         splitHistoryManager.pastSplits.reduce(0) { total, split in
             let yourShare = split.userShares["Brian"] ?? 0
             let fullAmount = split.totalAmount
-            return total + (fullAmount - yourShare)
+            
+            // Convert both amounts to current currency
+            let convertedFullAmount = currencyManager.getConvertedAmount(fullAmount, from: split.originalCurrency)
+            let convertedYourShare = currencyManager.getConvertedAmount(yourShare, from: split.originalCurrency)
+            
+            return total + (convertedFullAmount - convertedYourShare)
         }
     }
     
@@ -350,7 +373,7 @@ struct ProfileView: View {
     }
     
     private func formatCurrency(_ amount: Double) -> String {
-        return String(format: "$%.2f", amount)
+        return currencyManager.formatAmount(amount)
     }
 }
 
