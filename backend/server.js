@@ -18,7 +18,10 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER, // splitsy.contact@gmail.com
     pass: process.env.EMAIL_PASS  // App-specific password
-  }
+  },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,   // 10 seconds
+  socketTimeout: 10000      // 10 seconds
 });
 
 // Feedback endpoint
@@ -78,9 +81,10 @@ ${deviceInfo}
     }
 
     // Send email
-    await transporter.sendMail(mailOptions);
-
-    console.log('✅ Feedback email sent successfully');
+    console.log('📧 Attempting to send email...');
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Feedback email sent successfully:', result.messageId);
+    
     res.status(200).json({ 
       success: true, 
       message: 'Feedback sent successfully' 

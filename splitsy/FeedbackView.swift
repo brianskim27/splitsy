@@ -682,8 +682,7 @@ struct FeedbackView: View {
         let jsonData = try JSONEncoder().encode(feedbackData)
         
         // Create URL request
-        // TODO: Replace with your actual deployed API URL
-        guard let url = URL(string: "https://splitsy-feedback-api.herokuapp.com/api/feedback") else {
+        guard let url = URL(string: "https://splitsy-production.up.railway.app/api/feedback") else {
             throw NetworkError.invalidURL
         }
         
