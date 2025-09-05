@@ -26,9 +26,11 @@ app.post('/api/feedback', async (req, res) => {
       userJourney,
       frequency,
       impact,
-      contactEmail,
       additionalComments,
-      attachedImages
+      attachedImages,
+      userDisplayName,
+      userEmail,
+      userUsername
     } = req.body;
 
     // Create email content
@@ -36,6 +38,12 @@ app.post('/api/feedback', async (req, res) => {
 Hello Splitsy Team,
 
 You have received new feedback from the Splitsy iOS app:
+
+USER INFORMATION:
+================
+Display Name: ${userDisplayName}
+Email: ${userEmail}
+Username: @${userUsername}
 
 FEEDBACK DETAILS:
 ================
@@ -52,7 +60,6 @@ ${deviceInfo}
     if (userJourney) emailBody += `\nUser Journey: ${userJourney}`;
     if (frequency) emailBody += `\nFrequency: ${frequency}`;
     if (impact) emailBody += `\nImpact: ${impact}`;
-    if (contactEmail) emailBody += `\nContact Email: ${contactEmail}`;
     if (additionalComments) emailBody += `\n\nAdditional Comments:\n${additionalComments}`;
 
     emailBody += `\n\nBest regards,
@@ -68,6 +75,13 @@ Please do not reply to this email address.`;
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
       <h2 style="color: #2c3e50;">New Feedback from Splitsy iOS App</h2>
       
+      <div style="background-color: #e8f4fd; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #3498db;">
+        <h3 style="color: #2c3e50; margin-top: 0;">User Information</h3>
+        <p><strong>Display Name:</strong> ${userDisplayName}</p>
+        <p><strong>Email:</strong> ${userEmail}</p>
+        <p><strong>Username:</strong> @${userUsername}</p>
+      </div>
+      
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
         <h3 style="color: #2c3e50; margin-top: 0;">Feedback Details</h3>
         <p><strong>Type:</strong> ${feedbackType}</p>
@@ -80,7 +94,6 @@ Please do not reply to this email address.`;
     if (userJourney) htmlBody += `<p><strong>User Journey:</strong> ${userJourney}</p>`;
     if (frequency) htmlBody += `<p><strong>Frequency:</strong> ${frequency}</p>`;
     if (impact) htmlBody += `<p><strong>Impact:</strong> ${impact}</p>`;
-    if (contactEmail) htmlBody += `<p><strong>Contact Email:</strong> ${contactEmail}</p>`;
     if (additionalComments) htmlBody += `<p><strong>Additional Comments:</strong></p><p style="background-color: white; padding: 15px; border-left: 4px solid #e74c3c;">${additionalComments.replace(/\n/g, '<br>')}</p>`;
 
     htmlBody += `
