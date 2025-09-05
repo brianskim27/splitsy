@@ -12,21 +12,21 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 - **High Accuracy**: Advanced OCR technology for reliable text recognition
 
 ### 👥 **Intuitive Bill Splitting**
-- **Drag & Drop Assignment**: Easily assign items to different people
+- **Tap to Assign**: Easily assign items to different people
 - **Real-time Calculations**: Instant updates as you assign items
 - **Tip Management**: Add tips with percentage or fixed amount options
-- **Multiple Payment Methods**: Support for various splitting scenarios
+- **Accurate Currencies**: Change and convert currencies in real-time
+- **Multiple Payment Methods**: Support for various splitting scenarios (coming soon)
 
 ### 🎨 **Modern UI/UX**
 - **Clean, Intuitive Design**: Beautiful SwiftUI interface with smooth animations
 - **Horizontal Item Wheels**: Easy-to-use scrollable item selection
-- **Dark/Light Mode Support**: Automatic theme adaptation
 - **Keyboard-Friendly**: Smart keyboard handling with tap-to-dismiss
 
 ### 🔐 **Secure Authentication**
 - **Firebase Integration**: Robust user authentication and data storage
 - **Google Sign-In**: One-tap login with Google accounts
-- **Apple Sign-In**: Secure authentication with Apple ID
+- **Apple Sign-In**: Secure authentication with Apple ID (coming soon)
 - **Email Verification**: Complete account setup with username creation
 
 ### 📊 **Comprehensive History**
@@ -192,7 +192,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👥 **Team**
 
 - **Brian** - Lead Developer & Designer
-- **AI Assistant** - Development Support
 
 ## 📞 **Support**
 
