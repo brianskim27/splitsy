@@ -158,15 +158,15 @@ struct OpenSourceLicensesView: View {
     private var licenseInformationSection: some View {
         LegalSection(title: "License Information") {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Splitsy itself is licensed under the MIT License. You may use, modify, and distribute the source code in accordance with the terms of the MIT License.")
+                Text("Splitsy itself is proprietary software. All rights reserved. The source code is protected by copyright and may not be copied, modified, or distributed without explicit written permission.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .lineSpacing(4)
                 
                 VStack(alignment: .leading, spacing: 8) {
                     LicenseInfo(
-                        title: "MIT License",
-                        description: "Permissive license allowing commercial use, modification, and distribution"
+                        title: "Proprietary License",
+                        description: "All rights reserved. No copying, modification, or distribution permitted without permission"
                     )
                     
                     LicenseInfo(

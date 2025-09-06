@@ -1,3 +1,11 @@
+//
+//  splitsyApp.swift
+//  Splitsy
+//
+//  Created by Brian Kim on 2025.
+//  Copyright © 2025 Brian Kim. All rights reserved.
+//
+
 import SwiftUI
 import Firebase
 

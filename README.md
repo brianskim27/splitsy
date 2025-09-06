@@ -2,6 +2,11 @@
 
 **Because math shouldn't ruin your dinner plans**
 
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+> ⚠️ **Proprietary Software** - This code is protected by copyright and may not be copied, modified, or distributed without permission. See [LICENSE](LICENSE) for details.
+> 
+> **Copyright © 2025 Brian Kim. All rights reserved.**
+
 Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting. Simply take a photo of your receipt, and our AI-powered system will automatically parse items and prices, allowing you to assign each item to your party members in seconds.
 
 ## ✨ Features
@@ -188,7 +193,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📄 **License**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is proprietary software. All rights reserved. See the [LICENSE](LICENSE) file for details.
 
 ## 👥 **Team**
 
