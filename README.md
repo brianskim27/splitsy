@@ -1,5 +1,5 @@
-# <img width="80" height="80" alt="splitsy icon official 80x80" src="https://github.com/user-attachments/assets/8fbbed37-b9ce-4dc5-a73d-3d0ce56f60d3" />
-Splitsy
+<img width="80" height="80" alt="splitsy icon official 80x80" src="https://github.com/user-attachments/assets/8fbbed37-b9ce-4dc5-a73d-3d0ce56f60d3" />
+# Splitsy
 
 **Because math shouldn't ruin your dinner plans**
 
