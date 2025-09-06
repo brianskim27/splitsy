@@ -101,7 +101,7 @@ service cloud.firestore {
 ## 📋 Next Steps
 
 After Firebase is working, you can proceed to implement:
-1. **Social Login** (Google, Facebook)
+1. **Social Login** (Google, Apple (in development))
 2. **Email Verification**
 3. **Advanced Data Sync** (real-time updates, offline support)
 
