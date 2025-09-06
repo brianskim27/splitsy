@@ -63,7 +63,36 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 
 ## 📱 **Screenshots**
 
-*Coming soon - App Store screenshots will be added here*
+<div align="center">
+   <img src="screenshots/01-home-screen.png" width="200" alt="Home Screen">
+   <img src="screenshots/02-receipt-scanning.png" width="200" alt="Receipt Scanning">
+   <img src="screenshots/03-item-assignment.png" width="200" alt="Item Assignment">
+</div>
+
+<div align="center">
+   <img src="screenshots/04-review.png" width="200" alt="Review Split Calculation">
+   <img src="screenshots/05-result.png" width="200" alt="Final Split Result">
+   <img src="screenshots/06-split-details.png" width="200" alt="Split Details">
+   <img src="screenshots/07-history.png" width="200" alt="History">
+   <img src="screenshots/08-profile-view.png" width="200" alt="Profile Screen">
+   <img src="screenshots/09-statistics-dashboard.png" width="200" alt="Statistics Dashboard">
+   <img src="screenshots/10-currency.png" width="200" alt="Currency">
+   <img src="screenshots/11-quick-split.png" width="200" alt="Quick Split">
+</div>
+
+### **Key Features Showcased:**
+
+| Screenshot | Description |
+|------------|-------------|
+| **Home Screen** | Intuitive navigation with recent splits and quick actions |
+| **Receipt Scanning** | AI-powered OCR automatically detects items and prices with item-editing option |
+| **Item Assignment** | Easy tap-and-assign interface to assign items to people with tip option|
+| **Review Split Calculation** | Review item assignment and calculation for each person |
+| **Final Split Result** | Clear breakdown showing each person's total amount with export feature |
+| **Profile Screen** | Personal dashboard with spending insights and settings |
+| **Statistics Dashboard** | Comprehensive analytics with weekly/monthly trends |
+| **Currency** | Flexible multi-currency support for compatibility with any bill |
+| **Quick Split** | Manual input option for simple splitting |
 
 ## 🚀 **Getting Started**
 
