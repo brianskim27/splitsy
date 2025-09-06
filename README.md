@@ -63,51 +63,52 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 
 ## 📱 **Screenshots**
 
-<div align="center">
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Home Screen</h4>
-        <img src="screenshots/01-home-screen.png" width="150" alt="Home Screen">
-    </div>
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Receipt Scanning</h4>
-        <img src="screenshots/02-receipt-scanning.png" width="150" alt="Receipt Scanning">
-    </div>
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Item Assignment</h4>
-        <img src="screenshots/03-item-assignment.png" width="150" alt="Item Assignment">
-    </div>
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Final Result</h4>
-        <img src="screenshots/04-result.png" width="150" alt="Final Split Result">
-    </div>
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Split Details</h4>
-        <img src="screenshots/05-split-details.png" width="150" alt="Split Details">
-    </div>
-</div>
-
-<div align="center">
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">History</h4>
-        <img src="screenshots/06-history.png" width="150" alt="History">
-    </div>
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Profile</h4>
-        <img src="screenshots/07-profile-view.png" width="150" alt="Profile Screen">
-    </div>
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Statistics</h4>
-        <img src="screenshots/08-statistics-dashboard.png" width="150" alt="Statistics Dashboard">
-    </div>
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Currency</h4>
-        <img src="screenshots/09-currency.png" width="150" alt="Currency">
-    </div>
-    <div style="display: inline-block; margin: 5px; text-align: center; vertical-align: top; width: 160px;">
-        <h4 style="margin: 5px 0; font-size: 14px;">Quick Split</h4>
-        <img src="screenshots/10-quick-split.png" width="150" alt="Quick Split">
-    </div>
-</div>
+<table align="center">
+<tr>
+<td align="center">
+<h4>Home Screen</h4>
+<img src="screenshots/01-home-screen.png" width="150" alt="Home Screen">
+</td>
+<td align="center">
+<h4>Receipt Scanning</h4>
+<img src="screenshots/02-receipt-scanning.png" width="150" alt="Receipt Scanning">
+</td>
+<td align="center">
+<h4>Item Assignment</h4>
+<img src="screenshots/03-item-assignment.png" width="150" alt="Item Assignment">
+</td>
+<td align="center">
+<h4>Final Result</h4>
+<img src="screenshots/04-result.png" width="150" alt="Final Split Result">
+</td>
+<td align="center">
+<h4>Split Details</h4>
+<img src="screenshots/05-split-details.png" width="150" alt="Split Details">
+</td>
+</tr>
+<tr>
+<td align="center">
+<h4>History</h4>
+<img src="screenshots/06-history.png" width="150" alt="History">
+</td>
+<td align="center">
+<h4>Profile</h4>
+<img src="screenshots/07-profile-view.png" width="150" alt="Profile Screen">
+</td>
+<td align="center">
+<h4>Statistics</h4>
+<img src="screenshots/08-statistics-dashboard.png" width="150" alt="Statistics Dashboard">
+</td>
+<td align="center">
+<h4>Currency</h4>
+<img src="screenshots/09-currency.png" width="150" alt="Currency">
+</td>
+<td align="center">
+<h4>Quick Split</h4>
+<img src="screenshots/10-quick-split.png" width="150" alt="Quick Split">
+</td>
+</tr>
+</table>
 
 ### **Key Features Showcased:**
 
