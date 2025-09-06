@@ -1,5 +1,4 @@
-# <img width="1024" height="1024" alt="splitsy icon official" src="https://github.com/user-attachments/assets/56061218-43c5-4003-bb0b-5a58020955a1" />
- Splitsy
+# <img width="80" height="80" alt="splitsy icon official 80x80" src="https://github.com/user-attachments/assets/8fbbed37-b9ce-4dc5-a73d-3d0ce56f60d3" /> Splitsy
 
 **Because math shouldn't ruin your dinner plans**
 
