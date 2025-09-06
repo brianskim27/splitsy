@@ -75,7 +75,7 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
    <img src="screenshots/06-history.png" width="200" alt="History">
    <img src="screenshots/07-profile-view.png" width="200" alt="Profile Screen">
    <img src="screenshots/08-statistics-dashboard.png" width="200" alt="Statistics Dashboard">
-   <img src="screenshots/19-currency.png" width="200" alt="Currency">
+   <img src="screenshots/09-currency.png" width="200" alt="Currency">
    <img src="screenshots/10-quick-split.png" width="200" alt="Quick Split">
 </div>
 
