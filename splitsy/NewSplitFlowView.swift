@@ -225,6 +225,7 @@ struct CompletionStep: View {
     let receiptImage: UIImage?
     var onDone: () -> Void
     @State private var isPreparingShare = false
+    @State private var showFullScreen = false
     
     private var total: Double {
         userShares.values.reduce(0, +)
@@ -245,6 +246,33 @@ struct CompletionStep: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
+                    // Receipt Image
+                    if let receiptImage = receiptImage {
+                        Image(uiImage: receiptImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 360)
+                            .cornerRadius(18)
+                            .shadow(color: .black.opacity(0.1), radius: 10, y: 4)
+                            .padding(.horizontal, 24)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .onTapGesture { showFullScreen = true }
+                            .sheet(isPresented: $showFullScreen) {
+                                ZStack {
+                                    Color.black.ignoresSafeArea()
+                                    VStack {
+                                        Spacer()
+                                        ZoomableImageView(image: receiptImage)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        Spacer()
+                                        Button("Close") { showFullScreen = false }
+                                            .foregroundColor(.white)
+                                            .padding()
+                                    }
+                                }
+                            }
+                    }
+                    
                     // Header Info
                     VStack(spacing: 8) {
                         Text(splitName.isEmpty ? "Split" : splitName)
@@ -348,7 +376,7 @@ struct CompletionStep: View {
         }
         
         // Create custom share sheet with large image preview
-        let customShareController = CustomShareViewController(image: splitImage)
+        let customShareController = CompletionShareViewController(image: splitImage, splitName: splitName)
         
         isPreparingShare = false
         topController.present(customShareController, animated: true)
@@ -360,7 +388,8 @@ struct CompletionStep: View {
             splitName: splitName,
             userShares: userShares,
             detailedBreakdown: detailedBreakdown,
-            total: total
+            total: total,
+            receiptImage: receiptImage
         )
         .padding(16)
         .frame(width: 900, alignment: .center)
@@ -397,6 +426,7 @@ struct SplitExportView: View {
     let userShares: [String: Double]
     let detailedBreakdown: [String: [ItemDetail]]
     let total: Double
+    let receiptImage: UIImage?
     
     private func userInitials(_ name: String) -> String {
         let parts = name.split(separator: " ")
@@ -411,6 +441,17 @@ struct SplitExportView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // Receipt Image
+            if let receiptImage = receiptImage {
+                Image(uiImage: receiptImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 400)
+                    .cornerRadius(16)
+                    .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            
             VStack(spacing: 6) {
                 Text(splitName.isEmpty ? "Split" : splitName)
                     .font(.title2)
@@ -468,6 +509,196 @@ struct SplitExportView: View {
         }
         .padding(16)
         .background(Color(.systemBackground))
+    }
+}
+
+// MARK: - Completion Share View Controller
+class CompletionShareViewController: UIViewController {
+    private let image: UIImage
+    private let splitName: String
+    private var activityViewController: UIActivityViewController?
+    
+    init(image: UIImage, splitName: String) {
+        self.image = image
+        self.splitName = splitName
+        super.init(nibName: nil, bundle: nil)
+        
+        self.modalPresentationStyle = .pageSheet
+        
+        if let sheetController = self.sheetPresentationController {
+            sheetController.detents = [.large()]
+            sheetController.selectedDetentIdentifier = .large
+            sheetController.prefersGrabberVisible = true
+            sheetController.prefersScrollingExpandsWhenScrolledToEdge = false
+            sheetController.prefersEdgeAttachedInCompactHeight = true
+            sheetController.preferredCornerRadius = 20
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        view.backgroundColor = .systemBackground
+        setupUI()
+    }
+    
+    private func setupUI() {
+        // Create container stack view
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = 16
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Create export label
+        let exportLabel = UILabel()
+        exportLabel.text = "Export Split"
+        exportLabel.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+        exportLabel.textAlignment = .center
+        exportLabel.textColor = .label
+        
+        // Create image container with rounded corners
+        let imageContainer = UIView()
+        imageContainer.backgroundColor = .secondarySystemBackground
+        imageContainer.layer.cornerRadius = 16
+        imageContainer.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Create image view
+        let imageView = UIImageView(image: image)
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isUserInteractionEnabled = true
+        
+        // Add tap gesture to image
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(imageViewTapped))
+        imageView.addGestureRecognizer(tapGesture)
+        
+        imageContainer.addSubview(imageView)
+        
+        // Create activity view controller
+        let imageSource = CompletionImageActivityItemSource(image: image, splitName: splitName)
+        activityViewController = UIActivityViewController(
+            activityItems: [imageSource],
+            applicationActivities: nil
+        )
+        
+        guard let activityViewController = activityViewController else { return }
+        
+        activityViewController.excludedActivityTypes = []
+        activityViewController.modalPresentationStyle = .none
+        
+        // Add activity controller as child
+        addChild(activityViewController)
+        activityViewController.view.translatesAutoresizingMaskIntoConstraints = false
+        activityViewController.view.backgroundColor = .clear
+        
+        // Add completion handler to dismiss when done
+        activityViewController.completionWithItemsHandler = { [weak self] _, _, _, _ in
+            self?.dismiss(animated: true)
+        }
+        
+        // Add views to stack
+        stackView.addArrangedSubview(exportLabel)
+        stackView.addArrangedSubview(imageContainer)
+        stackView.addArrangedSubview(activityViewController.view)
+        
+        view.addSubview(stackView)
+        
+        // Setup constraints with wider layout
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            stackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            
+            imageContainer.heightAnchor.constraint(equalToConstant: 300),
+            
+            imageView.topAnchor.constraint(equalTo: imageContainer.topAnchor, constant: 12),
+            imageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor, constant: 12),
+            imageView.trailingAnchor.constraint(equalTo: imageContainer.trailingAnchor, constant: -12),
+            imageView.bottomAnchor.constraint(equalTo: imageContainer.bottomAnchor, constant: -12),
+            
+            activityViewController.view.heightAnchor.constraint(greaterThanOrEqualToConstant: 280)
+        ])
+        
+        activityViewController.didMove(toParent: self)
+    }
+    
+    @objc private func imageViewTapped() {
+        let zoomView = ZoomableImageView(image: image)
+        let hostingController = UIHostingController(rootView: zoomView)
+        hostingController.modalPresentationStyle = .fullScreen
+        hostingController.view.backgroundColor = .black
+        
+        // Add close button
+        let closeButton = UIButton(type: .system)
+        closeButton.setTitle("Close", for: .normal)
+        closeButton.setTitleColor(.white, for: .normal)
+        closeButton.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        closeButton.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        closeButton.layer.cornerRadius = 8
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.addTarget(self, action: #selector(closeZoomView), for: .touchUpInside)
+        
+        hostingController.view.addSubview(closeButton)
+        NSLayoutConstraint.activate([
+            closeButton.topAnchor.constraint(equalTo: hostingController.view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            closeButton.trailingAnchor.constraint(equalTo: hostingController.view.trailingAnchor, constant: -20),
+            closeButton.widthAnchor.constraint(equalToConstant: 80),
+            closeButton.heightAnchor.constraint(equalToConstant: 40)
+        ])
+        
+        present(hostingController, animated: true)
+    }
+    
+    @objc private func closeZoomView() {
+        dismiss(animated: true)
+    }
+}
+
+// MARK: - Completion Image Activity Item Source
+class CompletionImageActivityItemSource: NSObject, UIActivityItemSource {
+    private let image: UIImage
+    private let splitName: String
+    
+    init(image: UIImage, splitName: String) {
+        self.image = image
+        self.splitName = splitName
+        super.init()
+    }
+    
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        return image
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        return image
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
+        return splitName.isEmpty ? "Split Details" : splitName
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
+        return image
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, dataTypeIdentifierForActivityType activityType: UIActivity.ActivityType?) -> String {
+        return "public.image"
+    }
+    
+    @available(iOS 13.0, *)
+    func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
+        let metadata = LPLinkMetadata()
+        metadata.title = splitName.isEmpty ? "Split Details" : splitName
+        
+        let imageProvider = NSItemProvider(object: image)
+        metadata.imageProvider = imageProvider
+        
+        return metadata
     }
 }
 
