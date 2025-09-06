@@ -182,7 +182,10 @@ struct StatisticsDashboard: View {
     private var moneySaved: Double {
         // Calculate how much saved by splitting vs paying full amounts
         selectedMonthSplits.reduce(0) { total, split in
-            let yourShare = split.userShares[authManager.currentUser?.name ?? ""] ?? 0
+            guard let currentUserName = authManager.currentUser?.name, !currentUserName.isEmpty else {
+                return total // Skip this split if user name is not available
+            }
+            let yourShare = split.userShares[currentUserName] ?? 0
             let fullAmount = split.totalAmount
             
             // Convert both amounts to current currency
@@ -352,10 +355,12 @@ struct StatCard: View {
     let selectedDate: Date
     @EnvironmentObject var splitHistoryManager: SplitHistoryManager
     @EnvironmentObject var currencyManager: CurrencyManager
+    @EnvironmentObject var authManager: AuthenticationManager
     
     var body: some View {
         NavigationLink(destination: DetailedStatsView(splitHistoryManager: splitHistoryManager, statType: statType, selectedMonth: selectedDate)
-            .environmentObject(currencyManager)) {
+            .environmentObject(currencyManager)
+            .environmentObject(authManager)) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: icon)

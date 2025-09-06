@@ -108,7 +108,10 @@ struct DetailedStatsView: View {
                     }
                 case .moneySaved:
                     value = weekSplits.reduce(0) { total, split in
-                        let yourShare = split.userShares[authManager.currentUser?.name ?? ""] ?? 0
+                        guard let currentUserName = authManager.currentUser?.name, !currentUserName.isEmpty else {
+                            return total // Skip this split if user name is not available
+                        }
+                        let yourShare = split.userShares[currentUserName] ?? 0
                         let fullAmount = split.totalAmount
                         
                         // Convert both amounts to current currency
@@ -154,7 +157,10 @@ struct DetailedStatsView: View {
                     }
                 case .moneySaved:
                     value = monthSplits.reduce(0) { total, split in
-                        let yourShare = split.userShares[authManager.currentUser?.name ?? ""] ?? 0
+                        guard let currentUserName = authManager.currentUser?.name, !currentUserName.isEmpty else {
+                            return total // Skip this split if user name is not available
+                        }
+                        let yourShare = split.userShares[currentUserName] ?? 0
                         let fullAmount = split.totalAmount
                         
                         // Convert both amounts to current currency
@@ -194,7 +200,10 @@ struct DetailedStatsView: View {
                         }
                     case .moneySaved:
                         value = monthSplits.reduce(0) { total, split in
-                            let yourShare = split.userShares[authManager.currentUser?.name ?? ""] ?? 0
+                            guard let currentUserName = authManager.currentUser?.name, !currentUserName.isEmpty else {
+                                return total // Skip this split if user name is not available
+                            }
+                            let yourShare = split.userShares[currentUserName] ?? 0
                             let fullAmount = split.totalAmount
                             
                             // Convert both amounts to current currency
