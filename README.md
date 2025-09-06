@@ -1,4 +1,4 @@
-# 🧾 Splitsy
+# <img width="80" height="80" alt="splitsy icon official 80x80" src="https://github.com/user-attachments/assets/b3e1e30e-766e-40a2-b878-c42b5b0b9eb1" /> Splitsy
 
 **Because math shouldn't ruin your dinner plans**
 
@@ -181,16 +181,6 @@ npm test
 2. Set environment variables
 3. Deploy automatically on push
 
-## 🤝 **Contributing**
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
 ## 📄 **License**
 
 This project is proprietary software. All rights reserved. See the [LICENSE](LICENSE) file for details.
@@ -202,16 +192,14 @@ This project is proprietary software. All rights reserved. See the [LICENSE](LIC
 ## 📞 **Support**
 
 - **Email**: splitsy.contact@gmail.com
-- **Issues**: [GitHub Issues](https://github.com/yourusername/splitsy/issues)
-- **Documentation**: [Wiki](https://github.com/yourusername/splitsy/wiki)
 
-## 🎯 **Roadmap**
+## 🎯 **Future Updates**
 
-- [ ] **v1.1**: Split templates and favorites
-- [ ] **v1.2**: Group management and recurring splits
-- [ ] **v1.3**: Payment integration (Venmo, PayPal)
-- [ ] **v1.4**: Receipt categorization and expense tracking
-- [ ] **v2.0**: Multi-platform support (Android, Web)
+- [ ] Split templates and favorites
+- [ ] Interactive social features
+- [ ] Payment integration (Venmo, PayPal)
+- [ ] Receipt categorization and expense tracking
+- [ ] Multi-platform support (Android, Web)
 
 ## 🙏 **Acknowledgments**
 
