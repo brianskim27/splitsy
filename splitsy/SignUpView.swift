@@ -13,6 +13,8 @@ struct SignUpView: View {
     @State private var showEmailTaken = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfService = false
+    @State private var showPassword = false
+    @State private var showConfirmPassword = false
     @FocusState private var focusedField: Field?
     
     enum Field {
@@ -139,16 +141,51 @@ struct SignUpView: View {
                                 .font(.headline)
                                 .foregroundColor(.primary)
                             
-                            SecureField("Create a password", text: $password)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .focused($focusedField, equals: .password)
-                                .onSubmit {
-                                    focusedField = .confirmPassword
+                            HStack {
+                                if showPassword {
+                                    TextField("Create a password", text: $password)
+                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        .focused($focusedField, equals: .password)
+                                        .onSubmit {
+                                            focusedField = .confirmPassword
+                                        }
+                                } else {
+                                    SecureField("Create a password", text: $password)
+                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        .focused($focusedField, equals: .password)
+                                        .onSubmit {
+                                            focusedField = .confirmPassword
+                                        }
                                 }
+                                
+                                Button(action: {
+                                    showPassword.toggle()
+                                }) {
+                                    Image(systemName: showPassword ? "eye.slash" : "eye")
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.trailing, 8)
+                            }
                             
-                            Text("Must be at least 6 characters")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            // Password requirements
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Password must contain:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                ForEach(getPasswordRequirements(), id: \.self) { requirement in
+                                    HStack(spacing: 6) {
+                                        Image(systemName: isPasswordRequirementMet(requirement) ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(isPasswordRequirementMet(requirement) ? .green : .gray)
+                                            .font(.caption)
+                                        
+                                        Text(requirement)
+                                            .font(.caption)
+                                            .foregroundColor(isPasswordRequirementMet(requirement) ? .green : .secondary)
+                                    }
+                                }
+                            }
+                            .padding(.top, 4)
                         }
                         
                         // Confirm password field
@@ -157,12 +194,31 @@ struct SignUpView: View {
                                 .font(.headline)
                                 .foregroundColor(.primary)
                             
-                            SecureField("Confirm your password", text: $confirmPassword)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .focused($focusedField, equals: .confirmPassword)
-                                .onSubmit {
-                                    signUp()
+                            HStack {
+                                if showConfirmPassword {
+                                    TextField("Confirm your password", text: $confirmPassword)
+                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        .focused($focusedField, equals: .confirmPassword)
+                                        .onSubmit {
+                                            signUp()
+                                        }
+                                } else {
+                                    SecureField("Confirm your password", text: $confirmPassword)
+                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        .focused($focusedField, equals: .confirmPassword)
+                                        .onSubmit {
+                                            signUp()
+                                        }
                                 }
+                                
+                                Button(action: {
+                                    showConfirmPassword.toggle()
+                                }) {
+                                    Image(systemName: showConfirmPassword ? "eye.slash" : "eye")
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.trailing, 8)
+                            }
                         }
                         
                         // Error message
@@ -266,7 +322,7 @@ struct SignUpView: View {
         !confirmPassword.isEmpty && 
         !name.isEmpty && 
         password == confirmPassword &&
-        password.count >= 6 &&
+        isPasswordValid(password) &&
         isValidEmail(email) &&
         emailAvailable &&
         !isCheckingEmail
@@ -311,11 +367,12 @@ struct SignUpView: View {
         guard tld.count >= 2 && tld.count <= 63 else { return false }
         guard tld.rangeOfCharacter(from: CharacterSet.decimalDigits) == nil else { return false }
         
-        // Check against common valid domains
-        return isValidDomain(domainPart)
+        // For production apps, we should be more permissive with domains
+        // Only block obviously invalid domains
+        return !isInvalidDomain(domainPart)
     }
     
-    private func isValidDomain(_ domain: String) -> Bool {
+    private func isInvalidDomain(_ domain: String) -> Bool {
         let domainLower = domain.lowercased()
         
         // List of known valid email domains (whitelist approach)
@@ -447,9 +504,54 @@ struct SignUpView: View {
             }
         }
         
-        // For now, be conservative and only allow domains that are in our whitelist
-        // or contain legitimate business keywords
+        // Allow all domains that pass basic validation (more permissive approach)
         return false
+    }
+    
+    private func isPasswordValid(_ password: String) -> Bool {
+        // Password must be at least 8 characters long
+        guard password.count >= 8 else { return false }
+        
+        // Password must contain at least one uppercase letter
+        guard password.range(of: "[A-Z]", options: .regularExpression) != nil else { return false }
+        
+        // Password must contain at least one lowercase letter
+        guard password.range(of: "[a-z]", options: .regularExpression) != nil else { return false }
+        
+        // Password must contain at least one digit
+        guard password.range(of: "[0-9]", options: .regularExpression) != nil else { return false }
+        
+        // Password must contain at least one special character
+        guard password.range(of: "[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]", options: .regularExpression) != nil else { return false }
+        
+        return true
+    }
+    
+    private func getPasswordRequirements() -> [String] {
+        return [
+            "At least 8 characters long",
+            "Contains uppercase letter (A-Z)",
+            "Contains lowercase letter (a-z)",
+            "Contains number (0-9)",
+            "Contains special character (!@#$%^&*)"
+        ]
+    }
+    
+    private func isPasswordRequirementMet(_ requirement: String) -> Bool {
+        switch requirement {
+        case "At least 8 characters long":
+            return password.count >= 8
+        case "Contains uppercase letter (A-Z)":
+            return password.range(of: "[A-Z]", options: .regularExpression) != nil
+        case "Contains lowercase letter (a-z)":
+            return password.range(of: "[a-z]", options: .regularExpression) != nil
+        case "Contains number (0-9)":
+            return password.range(of: "[0-9]", options: .regularExpression) != nil
+        case "Contains special character (!@#$%^&*)":
+            return password.range(of: "[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]", options: .regularExpression) != nil
+        default:
+            return false
+        }
     }
     
     private func checkEmailAvailability(_ email: String) {
