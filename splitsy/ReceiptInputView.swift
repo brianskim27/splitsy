@@ -414,7 +414,7 @@ struct ReceiptInputView: View {
         
         let requestHandler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         let request = VNRecognizeTextRequest { request, error in
-            if let error = error {
+            if error != nil {
                 return
             }
             

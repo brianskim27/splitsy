@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "splitsy icon v2 ripped transparent.png",
+      "filename" : "splitsy icon official.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "splitsy icon v2 ripped transparent 1.png",
+      "filename" : "splitsy icon official 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "splitsy icon v2 ripped transparent 2.png",
+      "filename" : "splitsy icon official 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

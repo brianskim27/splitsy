@@ -1037,11 +1037,6 @@ class FirebaseService: ObservableObject {
             }
             
         } catch {
-            
-            // Check if it's a Firebase Storage security rules error
-            if let nsError = error as NSError? {
-            }
-            
             DispatchQueue.main.async {
                 self.errorMessage = "Failed to upload profile picture: \(error.localizedDescription)"
                 self.isLoading = false
