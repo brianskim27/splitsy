@@ -64,19 +64,19 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 ## 📱 **Screenshots**
 
 <div align="center">
-   <img src="screenshots/01-home-screen.png" width="200" alt="Home Screen">
-   <img src="screenshots/02-receipt-scanning.png" width="200" alt="Receipt Scanning">
-   <img src="screenshots/03-item-assignment.png" width="200" alt="Item Assignment">
-   <img src="screenshots/04-result.png" width="200" alt="Final Split Result">
-   <img src="screenshots/05-split-details.png" width="200" alt="Split Details">
+    <img src="screenshots/01-home-screen.png" width="150" alt="Home Screen">
+    <img src="screenshots/02-receipt-scanning.png" width="150" alt="Receipt Scanning">
+    <img src="screenshots/03-item-assignment.png" width="150" alt="Item Assignment">
+    <img src="screenshots/04-result.png" width="150" alt="Final Split Result">
+    <img src="screenshots/05-split-details.png" width="150" alt="Split Details">
 </div>
 
 <div align="center">
-   <img src="screenshots/06-history.png" width="200" alt="History">
-   <img src="screenshots/07-profile-view.png" width="200" alt="Profile Screen">
-   <img src="screenshots/08-statistics-dashboard.png" width="200" alt="Statistics Dashboard">
-   <img src="screenshots/09-currency.png" width="200" alt="Currency">
-   <img src="screenshots/10-quick-split.png" width="200" alt="Quick Split">
+    <img src="screenshots/06-history.png" width="150" alt="History">
+    <img src="screenshots/07-profile-view.png" width="150" alt="Profile Screen">
+    <img src="screenshots/08-statistics-dashboard.png" width="150" alt="Statistics Dashboard">
+    <img src="screenshots/09-currency.png" width="150" alt="Currency">
+    <img src="screenshots/10-quick-split.png" width="150" alt="Quick Split">
 </div>
 
 ### **Key Features Showcased:**
