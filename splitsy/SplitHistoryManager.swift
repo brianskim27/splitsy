@@ -2,7 +2,8 @@ import Foundation
 import Combine
 import UIKit
 
-class SplitHistoryManager: ObservableObject {
+@MainActor
+class SplitHistoryManager: ObservableObject, @unchecked Sendable {
     @Published var pastSplits: [Split] = [] {
         didSet {
             saveSplits()

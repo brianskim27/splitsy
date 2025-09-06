@@ -32,7 +32,6 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 ### 🔐 **Secure Authentication**
 - **Firebase Integration**: Robust user authentication and data storage
 - **Google Sign-In**: One-tap login with Google accounts
-- **Apple Sign-In**: Secure authentication with Apple ID (coming soon)
 - **Email Verification**: Complete account setup with username creation
 
 ### 📊 **Comprehensive History**
@@ -149,7 +148,6 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 
 3. **Configure Authentication**
    - Enable Google Sign-In in Firebase Console
-   - Configure Apple Sign-In in Apple Developer Console
    - Update `Info.plist` with necessary URL schemes
 
 4. **Backend Setup** (Optional - for feedback system)
@@ -220,7 +218,6 @@ npm test
 - Firebase/Firestore
 - Firebase/Storage
 - GoogleSignIn
-- AuthenticationServices (Apple Sign-In)
 
 ### **Backend**
 - Express.js

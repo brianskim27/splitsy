@@ -1,13 +1,13 @@
 import Foundation
-import FirebaseAuth
+@preconcurrency import FirebaseAuth
 import FirebaseFirestore
 import FirebaseCore
 import FirebaseStorage
-import AuthenticationServices
 import GoogleSignIn
 import SwiftUI
 
-class FirebaseService: ObservableObject {
+@MainActor
+class FirebaseService: ObservableObject, @unchecked Sendable {
     static let shared = FirebaseService()
     
     let auth = Auth.auth()
@@ -451,111 +451,6 @@ class FirebaseService: ObservableObject {
     // Helper method to check if an email is truly available (for debugging)
     
     
-    // MARK: - Apple Sign In
-    
-    /*
-    func signInWithApple() async {
-        DispatchQueue.main.async {
-            self.isLoading = true
-            self.errorMessage = nil
-        }
-        
-        do {
-            let request = ASAuthorizationAppleIDProvider().createRequest()
-            request.requestedScopes = [.fullName, .email]
-            
-            let authResult = try await withCheckedThrowingContinuation { continuation in
-                Task { @MainActor in
-                let controller = ASAuthorizationController(authorizationRequests: [request])
-                let delegate = AppleSignInDelegate { result in
-                    continuation.resume(with: result)
-                }
-                controller.delegate = delegate
-                controller.presentationContextProvider = delegate
-                controller.performRequests()
-                
-                // Store delegate to prevent deallocation
-                objc_setAssociatedObject(controller, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN)
-                }
-            }
-            
-            // Handle Apple Sign In result
-            if let appleIDCredential = authResult.credential as? ASAuthorizationAppleIDCredential {
-                try await handleAppleSignIn(credential: appleIDCredential)
-            }
-            
-        } catch {
-            DispatchQueue.main.async {
-                self.errorMessage = "Apple Sign In failed: \(error.localizedDescription)"
-                self.isLoading = false
-            }
-        }
-    }
-    
-    private func handleAppleSignIn(credential: ASAuthorizationAppleIDCredential) async throws {
-        guard let appleIDToken = credential.identityToken,
-              let _ = String(data: appleIDToken, encoding: .utf8) else {
-            throw NSError(domain: "FirebaseService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid Apple ID token"])
-        }
-        
-        // For now, let's create a simple user profile without Firebase OAuth
-        // This will be replaced with proper Firebase integration once we have the correct API
-        let name = [credential.fullName?.givenName, credential.fullName?.familyName]
-            .compactMap { $0 }
-            .joined(separator: " ")
-        
-        let user = User(
-            id: UUID().uuidString,
-            email: credential.email ?? "",
-            name: name.isEmpty ? "Apple User" : name,
-            username: "", // Will be set during setup
-            createdAt: Date()
-        )
-        
-        DispatchQueue.main.async {
-            self.currentUser = user
-            self.isAuthenticated = true
-            self.isLoading = false
-        }
-        
-        // Save user to Firestore
-        try await saveUserToFirestore(user)
-    }
-    
-    // MARK: - Helper Methods for Apple Sign In
-    
-    private func randomNonceString(length: Int = 32) -> String {
-        precondition(length > 0)
-        let charset: [Character] =
-        Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-        var result = ""
-        var remainingLength = length
-        
-        while remainingLength > 0 {
-            let randoms: [UInt8] = (0 ..< 16).map { _ in
-                var random: UInt8 = 0
-                let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
-                if errorCode != errSecSuccess {
-                    fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
-                }
-                return random
-            }
-            
-            randoms.forEach { random in
-                if remainingLength == 0 {
-                    return
-                }
-                
-                if random < charset.count {
-                    result.append(charset[Int(random)])
-                    remainingLength -= 1
-                }
-            }
-        }
-        
-        return result
-    }
-    */
     
     // MARK: - Google Sign In
     

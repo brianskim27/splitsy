@@ -114,11 +114,6 @@ struct OpenSourceLicensesView: View {
                     license: "Apple Software License"
                 )
                 
-                AppleFramework(
-                    name: "AuthenticationServices",
-                    description: "Framework for Apple Sign-In integration",
-                    license: "Apple Software License"
-                )
             }
         }
     }

@@ -10,7 +10,8 @@ enum AuthState {
     case needsUsernameSetup
 }
 
-class AuthenticationManager: ObservableObject {
+@MainActor
+class AuthenticationManager: ObservableObject, @unchecked Sendable {
     @Published var authState: AuthState = .loading
     @Published var currentUser: User?
     @Published var isLoading = false
@@ -202,13 +203,6 @@ class AuthenticationManager: ObservableObject {
     
     // MARK: - Social Login Methods
     
-    /*
-    func signInWithApple() {
-        Task {
-            await firebaseService.signInWithApple()
-        }
-    }
-    */
     
     func signInWithGoogle() {
         Task {
