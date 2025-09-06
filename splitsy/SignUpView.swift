@@ -108,31 +108,6 @@ struct SignUpView: View {
                                     .foregroundColor(.red)
                                 }
                             
-                            // Debug buttons (remove in production)
-                            if !email.isEmpty && isValidEmail(email) {
-                                HStack(spacing: 10) {
-                                    Button("Debug Email Check") {
-                                        Task {
-                                            await authManager.debugEmailAvailability(email)
-                                        }
-                                    }
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                                    
-                                    Button("Cleanup Orphaned User") {
-                                        Task {
-                                            let success = await authManager.cleanupOrphanedUser(email)
-                                            if success {
-                                                print("✅ Cleanup completed successfully")
-                                            } else {
-                                                print("❌ Cleanup failed")
-                                            }
-                                        }
-                                    }
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                                }
-                            }
                         }
                         
                         // Password field

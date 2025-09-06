@@ -27,11 +27,9 @@ struct NewSplitFlowView: View {
                     case 0:
                         ChooseSourceStep(
                             onCamera: {
-                                // print("Camera button tapped")
                                 showCamera = true
                             },
                             onGallery: {
-                                // print("Gallery button tapped")
                                 showGallery = true
                             }
                         )

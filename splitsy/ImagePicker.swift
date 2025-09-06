@@ -15,7 +15,6 @@ struct ImagePicker: UIViewControllerRepresentable {
     }
 
     func makeUIViewController(context: Context) -> UIViewController {
-        // print("ImagePicker: Creating view controller with sourceType: \(sourceType)")
         switch sourceType {
         case .photoLibrary:
             var configuration = PHPickerConfiguration()

@@ -132,7 +132,6 @@ class CurrencyService: ObservableObject {
             
         } catch {
             await MainActor.run { lastError = "Failed to fetch exchange rate: \(error.localizedDescription)" }
-            print("Error fetching exchange rate: \(error)")
             return nil
         }
     }

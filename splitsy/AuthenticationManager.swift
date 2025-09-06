@@ -131,15 +131,11 @@ class AuthenticationManager: ObservableObject {
     }
     
     func uploadProfilePicture(_ image: UIImage) async {
-        print("🔐 AuthenticationManager: Uploading profile picture...")
         await firebaseService.uploadProfilePicture(image)
-        print("🔐 AuthenticationManager: Profile picture upload completed")
     }
     
     func removeProfilePicture() async {
-        print("🔐 AuthenticationManager: Removing profile picture...")
         await firebaseService.removeProfilePicture()
-        print("🔐 AuthenticationManager: Profile picture removal completed")
     }
     
     func isEmailVerified() -> Bool {
@@ -178,13 +174,6 @@ class AuthenticationManager: ObservableObject {
         return await firebaseService.deleteAccount()
     }
     
-    func debugEmailAvailability(_ email: String) async {
-        await firebaseService.debugEmailAvailability(email)
-    }
-    
-    func cleanupOrphanedUser(_ email: String) async -> Bool {
-        return await firebaseService.cleanupOrphanedUser(email)
-    }
     
     func sendEmailVerification() async {
         await firebaseService.sendEmailVerification()
@@ -251,7 +240,6 @@ class AuthenticationManager: ObservableObject {
                 self.currentUser = updatedUser
             }
         } catch {
-            print("Error updating user currency: \(error)")
         }
     }
 }

@@ -724,9 +724,7 @@ struct EditProfileView: View {
             )
         }
         .onChange(of: selectedImage) { _, newImage in
-            print("📸 ProfileView: Image selected - \(newImage != nil ? "Image present" : "No image")")
             if let image = newImage {
-                print("📸 ProfileView: Starting upload process...")
                 Task {
                     await authManager.uploadProfilePicture(image)
                     selectedImage = nil

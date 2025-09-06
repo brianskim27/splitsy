@@ -122,7 +122,6 @@ class SplitHistoryManager: ObservableObject {
                     // If data is too large (>1MB), remove it
                     if data.count > 1024 * 1024 {
                         userDefaults.removeObject(forKey: key)
-                        print("Removed large UserDefaults data for key: \(key)")
                     }
                 }
             }
@@ -132,7 +131,6 @@ class SplitHistoryManager: ObservableObject {
         if let data = userDefaults.data(forKey: "funFacts_lastFactIndex") {
             if data.count > 1024 * 1024 {
                 userDefaults.removeObject(forKey: "funFacts_lastFactIndex")
-                print("Removed large fun facts UserDefaults data")
             }
         }
     }

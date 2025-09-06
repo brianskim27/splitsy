@@ -415,7 +415,6 @@ struct ReceiptInputView: View {
         let requestHandler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         let request = VNRecognizeTextRequest { request, error in
             if let error = error {
-                print("OCR Error: \(error.localizedDescription)")
                 return
             }
             
@@ -440,7 +439,6 @@ struct ReceiptInputView: View {
             do {
                 try requestHandler.perform([request])
             } catch {
-                print("Failed to perform OCR: \(error.localizedDescription)")
             }
         }
     }
