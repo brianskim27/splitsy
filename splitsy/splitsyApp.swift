@@ -41,6 +41,14 @@ struct SplitsyApp: App {
                             }
                     }
                     .preferredColorScheme(.light)
+                case .needsEmailVerification:
+                    if let userEmail = authManager.currentUser?.email {
+                        EmailVerificationView(userEmail: userEmail)
+                            .environmentObject(authManager)
+                    } else {
+                        LoginView()
+                            .environmentObject(authManager)
+                    }
                 case .needsUsernameSetup:
                     GoogleUsernameSetupView()
                         .environmentObject(authManager)

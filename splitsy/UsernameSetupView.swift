@@ -218,7 +218,7 @@ struct UsernameSetupView: View {
                 return
             }
             
-            // Check if this is a manual signup (has email and password) or Google signup
+            // Check if this is a manual signup (has email and password) or existing user setup
             if let email = email, let password = password {
                 // Manual signup - create account with username
                 await authManager.signUpWithUsername(
@@ -228,7 +228,7 @@ struct UsernameSetupView: View {
                     username: usernameLower
                 )
             } else {
-                // Google signup - just complete username setup
+                // Existing user (from email verification or Google signup) - just complete username setup
                 authManager.completeUsernameSetup(username: usernameLower)
             }
             

@@ -60,8 +60,8 @@ class FirebaseService: ObservableObject {
         }
         
         do {
-            // Check if email is already taken
-            let isEmailAvailable = await checkEmailAvailability(email)
+            // Check if email is already taken with retry logic
+            let isEmailAvailable = await checkEmailAvailabilityWithRetry(email)
             guard isEmailAvailable else {
                 DispatchQueue.main.async {
                     self.errorMessage = "This email is already registered. Please use a different email or sign in instead."
@@ -83,16 +83,25 @@ class FirebaseService: ObservableObject {
             
             try await saveUserToFirestore(user)
             
+            // Send email verification
+            try await authResult.user.sendEmailVerification()
+            print("✅ FirebaseService: Email verification sent to \(email)")
+            
             DispatchQueue.main.async {
                 self.currentUser = user
-                self.isAuthenticated = false // Not fully authenticated until username is set
-                self.authState = .needsUsernameSetup
+                self.isAuthenticated = false // Not fully authenticated until email is verified
+                self.authState = .needsEmailVerification
                 self.isLoading = false
             }
             
         } catch {
             DispatchQueue.main.async {
-                self.errorMessage = self.getErrorMessage(from: error)
+                // Check if the error is "email already exists" in Firebase Auth
+                if let authError = error as NSError?, authError.code == 17007 {
+                    self.errorMessage = "This email is already registered. Please use a different email or sign in instead."
+                } else {
+                    self.errorMessage = self.getErrorMessage(from: error)
+                }
                 self.isLoading = false
             }
         }
@@ -105,8 +114,8 @@ class FirebaseService: ObservableObject {
         }
         
         do {
-            // Check if email is already taken
-            let isEmailAvailable = await checkEmailAvailability(email)
+            // Check if email is already taken with retry logic
+            let isEmailAvailable = await checkEmailAvailabilityWithRetry(email)
             guard isEmailAvailable else {
                 DispatchQueue.main.async {
                     self.errorMessage = "This email is already registered. Please use a different email or sign in instead."
@@ -129,19 +138,30 @@ class FirebaseService: ObservableObject {
             try await saveUserToFirestore(user)
             try await reserveUsername(username: username.lowercased(), userId: authResult.user.uid)
             
+            // Send email verification
+            try await authResult.user.sendEmailVerification()
+            print("✅ FirebaseService: Email verification sent to \(email)")
+            
             DispatchQueue.main.async {
                 self.currentUser = user
-                self.isAuthenticated = true
+                self.isAuthenticated = false // Not fully authenticated until email is verified
+                self.authState = .needsEmailVerification
                 self.isLoading = false
             }
             
         } catch {
             DispatchQueue.main.async {
-                self.errorMessage = self.getErrorMessage(from: error)
+                // Check if the error is "email already exists" in Firebase Auth
+                if let authError = error as NSError?, authError.code == 17007 {
+                    self.errorMessage = "This email is already registered. Please use a different email or sign in instead."
+                } else {
+                    self.errorMessage = self.getErrorMessage(from: error)
+                }
                 self.isLoading = false
             }
         }
     }
+    
     
     func checkUsernameAvailability(_ username: String) async -> Bool {
         do {
@@ -154,12 +174,25 @@ class FirebaseService: ObservableObject {
     
     func checkEmailAvailability(_ email: String) async -> Bool {
         do {
+            // Check if email exists in Firestore users collection
             let emailQuery = try await db.collection("users")
                 .whereField("email", isEqualTo: email.lowercased())
                 .limit(to: 1)
                 .getDocuments()
-            return emailQuery.documents.isEmpty
+            
+            // If email exists in Firestore, it's not available
+            if !emailQuery.documents.isEmpty {
+                return false
+            }
+            
+            // Since fetchSignInMethods is deprecated and has security implications,
+            // we'll rely primarily on Firestore checking for now.
+            // The actual Firebase Auth check will happen during signup attempt.
+            // This is more secure and avoids deprecated methods.
+            return true
+            
         } catch {
+            print("❌ FirebaseService: Error checking email availability in Firestore: \(error.localizedDescription)")
             return false
         }
     }
@@ -199,7 +232,8 @@ class FirebaseService: ObservableObject {
                 createdAt: currentUser.createdAt,
                 usernameLastChanged: username != currentUser.username ? Date() : currentUser.usernameLastChanged,
                 profilePictureURL: currentUser.profilePictureURL,
-                assignedItemIDs: currentUser.assignedItemIDs
+                assignedItemIDs: currentUser.assignedItemIDs,
+                preferredCurrency: currentUser.preferredCurrency
             )
             
             DispatchQueue.main.async {
@@ -324,15 +358,225 @@ class FirebaseService: ObservableObject {
     }
     
     func sendEmailVerification() async {
-        guard let user = auth.currentUser else { return }
+        guard let user = auth.currentUser else { 
+            print("❌ FirebaseService: No current user for email verification")
+            return 
+        }
         
         do {
             try await user.sendEmailVerification()
+            print("✅ FirebaseService: Email verification sent successfully")
         } catch {
+            print("❌ FirebaseService: Failed to send verification email: \(error.localizedDescription)")
             DispatchQueue.main.async {
                 self.errorMessage = "Failed to send verification email: \(error.localizedDescription)"
             }
         }
+    }
+    
+    func checkEmailVerificationStatus() async -> Bool {
+        guard let user = auth.currentUser else { 
+            print("❌ FirebaseService: No current user to check verification status")
+            return false 
+        }
+        
+        do {
+            try await user.reload()
+            let isVerified = user.isEmailVerified
+            print("📧 FirebaseService: Email verification status: \(isVerified ? "Verified" : "Not verified")")
+            return isVerified
+        } catch {
+            print("❌ FirebaseService: Failed to check email verification status: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    func resendEmailVerification() async {
+        await sendEmailVerification()
+    }
+    
+    
+    func deleteAccount() async -> Bool {
+        print("🗑️ FirebaseService: Starting account deletion process")
+        
+        guard let currentUser = self.currentUser else {
+            print("❌ FirebaseService: No current user found for deletion")
+            DispatchQueue.main.async {
+                self.errorMessage = "No user account found to delete"
+            }
+            return false
+        }
+        
+        print("✅ FirebaseService: Current user found for deletion - \(currentUser.id)")
+        
+        DispatchQueue.main.async {
+            self.isLoading = true
+            self.errorMessage = nil
+        }
+        
+        do {
+            // 1. Delete user's profile picture from Storage (if exists)
+            if currentUser.profilePictureURL != nil {
+                print("🔥 FirebaseService: Deleting profile picture from Storage")
+                let storageRef = storage.reference().child("profile_pictures/\(currentUser.id).jpg")
+                try? await storageRef.delete() // Use try? to not fail if image doesn't exist
+                print("✅ FirebaseService: Profile picture deleted from Storage")
+            }
+            
+            // 2. Delete user's splits from Firestore
+            print("🔥 FirebaseService: Deleting user's splits from Firestore")
+            let splitsQuery = try await db.collection("splits")
+                .whereField("userId", isEqualTo: currentUser.id)
+                .getDocuments()
+            
+            for document in splitsQuery.documents {
+                try await document.reference.delete()
+            }
+            print("✅ FirebaseService: User's splits deleted from Firestore")
+            
+            // 3. Delete user's username reservation
+            if !currentUser.username.isEmpty {
+                print("🔥 FirebaseService: Releasing username reservation")
+                try await db.collection("usernames").document(currentUser.username.lowercased()).delete()
+                print("✅ FirebaseService: Username reservation released")
+            }
+            
+            // 4. Delete user document from Firestore
+            print("🔥 FirebaseService: Deleting user document from Firestore")
+            try await db.collection("users").document(currentUser.id).delete()
+            print("✅ FirebaseService: User document deleted from Firestore")
+            
+            // 5. Delete Firebase Auth account
+            print("🔥 FirebaseService: Deleting Firebase Auth account")
+            try await auth.currentUser?.delete()
+            print("✅ FirebaseService: Firebase Auth account deleted")
+            
+            // 6. Clear local state
+            DispatchQueue.main.async {
+                self.currentUser = nil
+                self.isAuthenticated = false
+                self.isLoading = false
+                self.authState = .signedOut
+                print("✅ FirebaseService: Local state cleared, account deletion complete")
+            }
+            
+            return true
+            
+        } catch {
+            print("❌ FirebaseService: Account deletion failed - \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to delete account: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+            return false
+        }
+    }
+    
+    // Helper method to check if an email is truly available (for debugging)
+    func debugEmailAvailability(_ email: String) async {
+        print("🔍 Debug: Checking email availability for \(email)")
+        
+        // Check Firestore
+        do {
+            let emailQuery = try await db.collection("users")
+                .whereField("email", isEqualTo: email.lowercased())
+                .limit(to: 1)
+                .getDocuments()
+            print("🔍 Firestore check: \(emailQuery.documents.isEmpty ? "Available" : "Taken")")
+            
+            if !emailQuery.documents.isEmpty {
+                let document = emailQuery.documents.first!
+                print("🔍 Found user document in Firestore with ID: \(document.documentID)")
+                print("🔍 Document data: \(document.data())")
+            }
+        } catch {
+            print("🔍 Firestore check: Error - \(error.localizedDescription)")
+        }
+        
+        // Overall result
+        let overallAvailable = await checkEmailAvailability(email)
+        print("🔍 Overall result: \(overallAvailable ? "Available" : "Taken")")
+        print("🔍 Note: Firebase Auth check is handled during actual signup attempt to avoid deprecated methods")
+    }
+    
+    // Helper method to manually clean up orphaned user documents (for debugging)
+    func cleanupOrphanedUser(_ email: String) async -> Bool {
+        print("🧹 Debug: Attempting to clean up orphaned user document for \(email)")
+        
+        do {
+            // Find ALL user documents by email (not just the first one)
+            let emailQuery = try await db.collection("users")
+                .whereField("email", isEqualTo: email.lowercased())
+                .getDocuments()
+            
+            if emailQuery.documents.isEmpty {
+                print("🧹 No user documents found for \(email)")
+                return true
+            }
+            
+            print("🧹 Found \(emailQuery.documents.count) user document(s) for \(email)")
+            
+            var totalCleaned = 0
+            
+            // Clean up each document found
+            for document in emailQuery.documents {
+                let userId = document.documentID
+                print("🧹 Cleaning up user document with ID: \(userId)")
+                
+                // Delete the user document
+                try await document.reference.delete()
+                print("✅ User document \(userId) deleted successfully")
+                
+                // Also try to delete any associated data
+                // Delete username reservation if exists
+                let userData = document.data()
+                if let username = userData["username"] as? String, !username.isEmpty {
+                    try? await db.collection("usernames").document(username.lowercased()).delete()
+                    print("✅ Username reservation cleaned up for \(userId)")
+                }
+                
+                // Delete any splits associated with this user
+                let splitsQuery = try await db.collection("splits")
+                    .whereField("userId", isEqualTo: userId)
+                    .getDocuments()
+                
+                for splitDoc in splitsQuery.documents {
+                    try await splitDoc.reference.delete()
+                }
+                print("✅ User splits cleaned up for \(userId) (\(splitsQuery.documents.count) documents)")
+                
+                totalCleaned += 1
+            }
+            
+            print("✅ Total orphaned user documents cleaned up: \(totalCleaned)")
+            return true
+            
+        } catch {
+            print("❌ Failed to clean up orphaned user: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    // Method to force check email availability with retry logic
+    func checkEmailAvailabilityWithRetry(_ email: String, maxRetries: Int = 3) async -> Bool {
+        for attempt in 1...maxRetries {
+            print("🔄 Email availability check attempt \(attempt)/\(maxRetries) for \(email)")
+            
+            let isAvailable = await checkEmailAvailability(email)
+            
+            if isAvailable {
+                print("✅ Email is available on attempt \(attempt)")
+                return true
+            }
+            
+            if attempt < maxRetries {
+                print("⏳ Email not available, waiting 2 seconds before retry...")
+                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            }
+        }
+        
+        print("❌ Email not available after \(maxRetries) attempts")
+        return false
     }
     
     // MARK: - Apple Sign In
@@ -392,6 +636,7 @@ class FirebaseService: ObservableObject {
             id: UUID().uuidString,
             email: credential.email ?? "",
             name: name.isEmpty ? "Apple User" : name,
+            username: "", // Will be set during setup
             createdAt: Date()
         )
         
@@ -733,13 +978,19 @@ class FirebaseService: ObservableObject {
                         createdAt: (userData["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         usernameLastChanged: (userData["usernameLastChanged"] as? Timestamp)?.dateValue(),
                         profilePictureURL: userData["profilePictureURL"] as? String,
+                        assignedItemIDs: [], // Will be loaded separately if needed
                         preferredCurrency: userData["preferredCurrency"] as? String ?? "USD"
                     )
                     
                     DispatchQueue.main.async {
                         self.currentUser = user
-                        // Check if user needs username setup
-                        if user.username.isEmpty {
+                        
+                        // Check if user's email is verified first
+                        if !firebaseUser.isEmailVerified {
+                            // User needs to verify email first
+                            self.isAuthenticated = false
+                            self.authState = .needsEmailVerification
+                        } else if user.username.isEmpty {
                             // User is not fully authenticated until username is set
                             self.isAuthenticated = false
                             self.authState = .needsUsernameSetup
@@ -806,11 +1057,13 @@ class FirebaseService: ObservableObject {
             case .weakPassword:
                 return "Password is too weak. Please choose a stronger password"
             case .wrongPassword:
-                return "Incorrect password"
+                return "Incorrect password. Please check your password and try again."
             case .userNotFound:
                 return "No account found with this email address"
             case .tooManyRequests:
                 return "Too many failed attempts. Please try again later"
+            case .invalidCredential:
+                return "Incorrect password. Please check your password and try again."
             default:
                 return error.localizedDescription
             }
@@ -829,6 +1082,10 @@ class FirebaseService: ObservableObject {
                 return nsError.localizedDescription
             }
             default:
+                // Check for specific error codes that might indicate password issues
+                if nsError.code == 17007 || nsError.code == 17020 {
+                    return "Incorrect password. Please check your password and try again."
+                }
                 return error.localizedDescription
             }
         }
@@ -911,7 +1168,8 @@ class FirebaseService: ObservableObject {
                 createdAt: currentUser.createdAt,
                 usernameLastChanged: currentUser.usernameLastChanged,
                 profilePictureURL: finalDownloadURL.absoluteString,
-                assignedItemIDs: currentUser.assignedItemIDs
+                assignedItemIDs: currentUser.assignedItemIDs,
+                preferredCurrency: currentUser.preferredCurrency
             )
             
             DispatchQueue.main.async {
@@ -977,7 +1235,8 @@ class FirebaseService: ObservableObject {
                 createdAt: currentUser.createdAt,
                 usernameLastChanged: currentUser.usernameLastChanged,
                 profilePictureURL: nil,
-                assignedItemIDs: currentUser.assignedItemIDs
+                assignedItemIDs: currentUser.assignedItemIDs,
+                preferredCurrency: currentUser.preferredCurrency
             )
             
             DispatchQueue.main.async {

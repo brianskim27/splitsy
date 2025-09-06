@@ -6,6 +6,7 @@ enum AuthState {
     case signedOut
     case signedIn
     case loading
+    case needsEmailVerification
     case needsUsernameSetup
 }
 
@@ -23,6 +24,10 @@ class AuthenticationManager: ObservableObject {
     var onSignOut: (() -> Void)?
     
     private func checkInitialAuthState() {
+        // Only set initial auth state if we're still in loading state
+        // This prevents overriding states set by signup flows (needsEmailVerification, needsParentalConsent, etc.)
+        guard authState == .loading else { return }
+        
         // Check if there's a current user in Firebase Auth directly
         if firebaseService.auth.currentUser != nil {
             authState = .signedIn
@@ -41,9 +46,17 @@ class AuthenticationManager: ObservableObject {
         firebaseService.$isAuthenticated
             .sink { [weak self] isAuthenticated in
                 DispatchQueue.main.async {
-                    // Only update state if we're not in the initial loading phase
-                    if self?.authState != .loading {
-                        self?.authState = isAuthenticated ? .signedIn : .signedOut
+                    if let self = self {
+                        // If user becomes authenticated and we're in loading state, update to signed in
+                        if isAuthenticated && self.authState == .loading {
+                            self.authState = .signedIn
+                        }
+                        // If user becomes unauthenticated and we're not in a special state, update to signed out
+                        else if !isAuthenticated && 
+                                self.authState != .needsEmailVerification && 
+                                self.authState != .needsUsernameSetup {
+                            self.authState = .signedOut
+                        }
                     }
                 }
             }
@@ -104,6 +117,7 @@ class AuthenticationManager: ObservableObject {
         await firebaseService.signUpWithUsername(email: email, password: password, name: name, username: username)
     }
     
+    
     func checkUsernameAvailability(_ username: String) async -> Bool {
         return await firebaseService.checkUsernameAvailability(username)
     }
@@ -160,13 +174,32 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
-    // MARK: - Firebase Helper Methods
-    
-    func sendEmailVerification() {
-        Task {
-            await firebaseService.sendEmailVerification()
-        }
+    func deleteAccount() async -> Bool {
+        return await firebaseService.deleteAccount()
     }
+    
+    func debugEmailAvailability(_ email: String) async {
+        await firebaseService.debugEmailAvailability(email)
+    }
+    
+    func cleanupOrphanedUser(_ email: String) async -> Bool {
+        return await firebaseService.cleanupOrphanedUser(email)
+    }
+    
+    func sendEmailVerification() async {
+        await firebaseService.sendEmailVerification()
+    }
+    
+    func checkEmailVerificationStatus() async -> Bool {
+        return await firebaseService.checkEmailVerificationStatus()
+    }
+    
+    func resendEmailVerification() async {
+        await firebaseService.resendEmailVerification()
+    }
+    
+    
+    // MARK: - Firebase Helper Methods
     
     func saveSplits(_ splits: [Split]) {
         Task {

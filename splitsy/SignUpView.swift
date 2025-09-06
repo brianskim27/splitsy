@@ -11,6 +11,8 @@ struct SignUpView: View {
     @State private var isCheckingEmail = false
     @State private var emailAvailable = false
     @State private var showEmailTaken = false
+    @State private var showPrivacyPolicy = false
+    @State private var showTermsOfService = false
     @FocusState private var focusedField: Field?
     
     enum Field {
@@ -103,6 +105,32 @@ struct SignUpView: View {
                                     .font(.caption)
                                     .foregroundColor(.red)
                                 }
+                            
+                            // Debug buttons (remove in production)
+                            if !email.isEmpty && isValidEmail(email) {
+                                HStack(spacing: 10) {
+                                    Button("Debug Email Check") {
+                                        Task {
+                                            await authManager.debugEmailAvailability(email)
+                                        }
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                    
+                                    Button("Cleanup Orphaned User") {
+                                        Task {
+                                            let success = await authManager.cleanupOrphanedUser(email)
+                                            if success {
+                                                print("✅ Cleanup completed successfully")
+                                            } else {
+                                                print("❌ Cleanup failed")
+                                            }
+                                        }
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                }
+                            }
                         }
                         
                         // Password field
@@ -180,7 +208,7 @@ struct SignUpView: View {
                             
                             HStack(spacing: 4) {
                                 Button("Terms of Service") {
-                                    // Handle terms of service
+                                    showTermsOfService = true
                                 }
                                 .font(.caption)
                                 .foregroundColor(.blue)
@@ -190,7 +218,7 @@ struct SignUpView: View {
                                     .foregroundColor(.secondary)
                                 
                                 Button("Privacy Policy") {
-                                    // Handle privacy policy
+                                    showPrivacyPolicy = true
                                 }
                                 .font(.caption)
                                 .foregroundColor(.blue)
@@ -223,6 +251,12 @@ struct SignUpView: View {
                 UsernameSetupView(email: email, password: password)
                     .environmentObject(authManager)
             }
+            .sheet(isPresented: $showPrivacyPolicy) {
+                PrivacyPolicyView()
+            }
+            .sheet(isPresented: $showTermsOfService) {
+                TermsOfServiceView()
+            }
         }
     }
     
@@ -240,7 +274,8 @@ struct SignUpView: View {
     
     private func signUp() {
         guard isFormValid else { return }
-        showUsernameSetup = true
+        
+        authManager.signUp(email: email, password: password, name: name)
     }
     
     private func isValidEmail(_ email: String) -> Bool {

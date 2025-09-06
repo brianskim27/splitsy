@@ -15,6 +15,29 @@ struct User: Identifiable, Codable {
         case id, email, name, username, createdAt, usernameLastChanged, profilePictureURL, assignedItemIDs, preferredCurrency
     }
     
+    // Custom initializer to handle all parameters
+    init(
+        id: String,
+        email: String,
+        name: String,
+        username: String,
+        createdAt: Date,
+        usernameLastChanged: Date? = nil,
+        profilePictureURL: String? = nil,
+        assignedItemIDs: [UUID] = [],
+        preferredCurrency: String = "USD"
+    ) {
+        self.id = id
+        self.email = email
+        self.name = name
+        self.username = username
+        self.createdAt = createdAt
+        self.usernameLastChanged = usernameLastChanged
+        self.profilePictureURL = profilePictureURL
+        self.assignedItemIDs = assignedItemIDs
+        self.preferredCurrency = preferredCurrency
+    }
+    
     // Check if username can be changed (7 days since last change)
     var canChangeUsername: Bool {
         guard let lastChanged = usernameLastChanged else { return true }

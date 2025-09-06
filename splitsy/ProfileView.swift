@@ -823,6 +823,10 @@ struct AccountSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteAccountAlert = false
     @State private var showPasswordResetAlert = false
+    @State private var isDeletingAccount = false
+    @State private var showDeleteConfirmation = false
+    @State private var showDeleteError = false
+    @State private var deleteErrorMessage = ""
     
     private var emailVerificationSubtitle: String {
         authManager.isEmailVerified() ? "Email verified" : "Email not verified"
@@ -880,7 +884,9 @@ struct AccountSettingsView: View {
                                 color: emailVerificationColor
                             ) {
                                 if !isEmailVerified {
-                                    authManager.sendEmailVerification()
+                                    Task {
+                                        await authManager.sendEmailVerification()
+                                    }
                                 }
                             }
                         }
@@ -903,12 +909,14 @@ struct AccountSettingsView: View {
                             }
                             
                             SettingsButton(
-                                title: "Delete Account",
-                                subtitle: "Permanently delete your account and data",
-                                icon: "trash",
+                                title: isDeletingAccount ? "Deleting Account..." : "Delete Account",
+                                subtitle: isDeletingAccount ? "Please wait while we delete your account" : "Permanently delete your account and data",
+                                icon: isDeletingAccount ? "hourglass" : "trash",
                                 color: .red
                             ) {
-                                showDeleteAccountAlert = true
+                                if !isDeletingAccount {
+                                    showDeleteAccountAlert = true
+                                }
                             }
                         }
                     }
@@ -939,10 +947,23 @@ struct AccountSettingsView: View {
             .alert("Delete Account", isPresented: $showDeleteAccountAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
-                    // TODO: Implement account deletion
+                    showDeleteConfirmation = true
                 }
             } message: {
                 Text("This action cannot be undone. All your data will be permanently deleted.")
+            }
+            .alert("Confirm Account Deletion", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete Forever", role: .destructive) {
+                    deleteAccount()
+                }
+            } message: {
+                Text("Are you absolutely sure? This will permanently delete your account, all your splits, and all associated data. This action cannot be undone.")
+            }
+            .alert("Account Deletion Failed", isPresented: $showDeleteError) {
+                Button("OK") { }
+            } message: {
+                Text(deleteErrorMessage)
             }
         }
     }
@@ -952,6 +973,35 @@ struct AccountSettingsView: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         return formatter.string(from: date)
+    }
+    
+    private func deleteAccount() {
+        guard !isDeletingAccount else { return }
+        
+        isDeletingAccount = true
+        
+        Task {
+            let success = await authManager.deleteAccount()
+            
+            await MainActor.run {
+                isDeletingAccount = false
+                
+                if success {
+                    // Account deletion successful - user will be automatically signed out
+                    // and redirected to login screen by the auth state change
+                    dismiss()
+                } else {
+                    // Show error message if deletion failed
+                    if let errorMessage = authManager.errorMessage {
+                        deleteErrorMessage = errorMessage
+                        showDeleteError = true
+                    } else {
+                        deleteErrorMessage = "An unknown error occurred while deleting your account. Please try again or contact support."
+                        showDeleteError = true
+                    }
+                }
+            }
+        }
     }
 }
 

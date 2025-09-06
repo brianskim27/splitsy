@@ -217,10 +217,10 @@ struct LoginView: View {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
         )
-        .sheet(isPresented: $showSignUp) {
-            SignUpView()
-                .environmentObject(authManager)
-        }
+                    .sheet(isPresented: $showSignUp) {
+                SignUpView()
+                    .environmentObject(authManager)
+            }
         .sheet(isPresented: $showForgotPassword) {
             ForgotPasswordView()
                 .environmentObject(authManager)

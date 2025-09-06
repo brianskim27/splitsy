@@ -2,6 +2,9 @@ import SwiftUI
 
 struct AboutView: View {
     @Environment(\.dismiss) var dismiss
+    @State private var showPrivacyPolicy = false
+    @State private var showTermsOfService = false
+    @State private var showOpenSourceLicenses = false
     
     var body: some View {
         NavigationView {
@@ -41,6 +44,15 @@ struct AboutView: View {
                     .font(.headline)
                 }
             }
+        }
+        .sheet(isPresented: $showPrivacyPolicy) {
+            PrivacyPolicyView()
+        }
+        .sheet(isPresented: $showTermsOfService) {
+            TermsOfServiceView()
+        }
+        .sheet(isPresented: $showOpenSourceLicenses) {
+            OpenSourceLicensesView()
         }
     }
     
@@ -263,7 +275,7 @@ struct AboutView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    // TODO: Add privacy policy URL
+                    showPrivacyPolicy = true
                 }
                 
                 HStack {
@@ -276,7 +288,7 @@ struct AboutView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    // TODO: Add terms of service URL
+                    showTermsOfService = true
                 }
                 
                 HStack {
@@ -289,7 +301,7 @@ struct AboutView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    // TODO: Add open source licenses view
+                    showOpenSourceLicenses = true
                 }
             }
             .font(.subheadline)
