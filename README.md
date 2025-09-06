@@ -1,4 +1,4 @@
-# <img src="splitsy/Assets.xcassets/app_logo.imageset/splitsy icon v2 ripped transparent 160x160.png" width="40" height="40" alt="Splitsy Icon"> Splitsy
+# <img width="80" height="80" alt="splitsy icon official 80x80" src="https://github.com/user-attachments/assets/b3e1e30e-766e-40a2-b878-c42b5b0b9eb1" /> Splitsy
 
 **Because math shouldn't ruin your dinner plans**
 
