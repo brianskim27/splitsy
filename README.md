@@ -64,19 +64,49 @@ Splitsy is a modern iOS app that eliminates the hassle of manual bill splitting.
 ## 📱 **Screenshots**
 
 <div align="center">
-    <img src="screenshots/01-home-screen.png" width="150" alt="Home Screen">
-    <img src="screenshots/02-receipt-scanning.png" width="150" alt="Receipt Scanning">
-    <img src="screenshots/03-item-assignment.png" width="150" alt="Item Assignment">
-    <img src="screenshots/04-result.png" width="150" alt="Final Split Result">
-    <img src="screenshots/05-split-details.png" width="150" alt="Split Details">
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Home Screen</h4>
+        <img src="screenshots/01-home-screen.png" width="150" alt="Home Screen">
+    </div>
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Receipt Scanning</h4>
+        <img src="screenshots/02-receipt-scanning.png" width="150" alt="Receipt Scanning">
+    </div>
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Item Assignment</h4>
+        <img src="screenshots/03-item-assignment.png" width="150" alt="Item Assignment">
+    </div>
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Final Result</h4>
+        <img src="screenshots/04-result.png" width="150" alt="Final Split Result">
+    </div>
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Split Details</h4>
+        <img src="screenshots/05-split-details.png" width="150" alt="Split Details">
+    </div>
 </div>
 
 <div align="center">
-    <img src="screenshots/06-history.png" width="150" alt="History">
-    <img src="screenshots/07-profile-view.png" width="150" alt="Profile Screen">
-    <img src="screenshots/08-statistics-dashboard.png" width="150" alt="Statistics Dashboard">
-    <img src="screenshots/09-currency.png" width="150" alt="Currency">
-    <img src="screenshots/10-quick-split.png" width="150" alt="Quick Split">
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>History</h4>
+        <img src="screenshots/06-history.png" width="150" alt="History">
+    </div>
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Profile</h4>
+        <img src="screenshots/07-profile-view.png" width="150" alt="Profile Screen">
+    </div>
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Statistics</h4>
+        <img src="screenshots/08-statistics-dashboard.png" width="150" alt="Statistics Dashboard">
+    </div>
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Currency</h4>
+        <img src="screenshots/09-currency.png" width="150" alt="Currency">
+    </div>
+    <div style="display: inline-block; margin: 10px; text-align: center;">
+        <h4>Quick Split</h4>
+        <img src="screenshots/10-quick-split.png" width="150" alt="Quick Split">
+    </div>
 </div>
 
 ### **Key Features Showcased:**
