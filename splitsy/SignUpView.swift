@@ -204,6 +204,7 @@ struct SignUpView: View {
                                 .multilineTextAlignment(.center)
                         }
                         
+                        
                         // Sign up button
                         Button(action: signUp) {
                             HStack {
@@ -219,15 +220,26 @@ struct SignUpView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(
+                                isFormValid ? 
                                 LinearGradient(
                                     gradient: Gradient(colors: [.blue, .cyan]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ) :
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.gray, .gray.opacity(0.8)]),
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                             .foregroundColor(.white)
                             .cornerRadius(12)
-                            .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
+                            .shadow(
+                                color: isFormValid ? .blue.opacity(0.3) : .gray.opacity(0.2), 
+                                radius: isFormValid ? 6 : 2, 
+                                x: 0, 
+                                y: isFormValid ? 3 : 1
+                            )
                         }
                         .disabled(authManager.isLoading || !isFormValid)
                         
@@ -287,6 +299,12 @@ struct SignUpView: View {
             }
             .sheet(isPresented: $showTermsOfService) {
                 TermsOfServiceView()
+            }
+            .onChange(of: authManager.authState) { oldValue, newValue in
+                // Dismiss the sheet when auth state changes to needsEmailVerification
+                if newValue == .needsEmailVerification {
+                    dismiss()
+                }
             }
         }
     }
@@ -372,7 +390,7 @@ struct SignUpView: View {
         
         // Check if it's a known valid domain
         if validDomains.contains(domainLower) {
-            return true
+            return false  // Domain is valid, so it's NOT invalid
         }
         
         // For other domains, check if they end with a valid TLD

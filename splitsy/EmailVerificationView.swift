@@ -41,17 +41,24 @@ struct EmailVerificationView: View {
                 }
                 
                 VStack(spacing: 12) {
-                    Text("Please check your email and click the verification link to activate your account.")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                    VStack(spacing: 8) {
+                        Text("Please check your email and click the")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Text("verification link to activate your account.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 20)
                     
                     Text("Don't see the email? Check your spam folder.")
                         .font(.caption)
                         .foregroundColor(.orange)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                        .padding(.horizontal, 20)
                 }
                 
                 VStack(spacing: 16) {
