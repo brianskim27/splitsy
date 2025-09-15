@@ -130,9 +130,7 @@ Please do not reply to this email address.`;
     }
 
     // Send email
-    console.log('📧 Attempting to send email via SendGrid...');
     const result = await sgMail.send(msg);
-    console.log('✅ Feedback email sent successfully:', result[0].statusCode);
     
     res.status(200).json({ 
       success: true, 
@@ -140,7 +138,6 @@ Please do not reply to this email address.`;
     });
 
   } catch (error) {
-    console.error('❌ Error sending feedback email:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Failed to send feedback' 
@@ -158,8 +155,7 @@ app.get('/api/health', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Splitsy Feedback API running on port ${PORT}`);
-  console.log(`📧 Email configured via SendGrid`);
+  // Server started successfully
 });
 
 module.exports = app;
