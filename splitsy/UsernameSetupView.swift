@@ -149,6 +149,7 @@ struct UsernameSetupView: View {
                     .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
                 }
                 .disabled(isLoading || !isFormValid)
+                .opacity(isLoading || !isFormValid ? 0.6 : 1.0)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
             }

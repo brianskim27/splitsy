@@ -171,26 +171,24 @@ class FirebaseService: ObservableObject, @unchecked Sendable {
     }
     
     func checkEmailAvailability(_ email: String) async -> Bool {
+        // First, try to sign in with the email to check if it exists in Firebase Auth
+        // This is the most reliable way to check if the email is truly available
         do {
-            // Check if email exists in Firestore users collection
-            let emailQuery = try await db.collection("users")
-                .whereField("email", isEqualTo: email.lowercased())
-                .limit(to: 1)
-                .getDocuments()
-            
-            // If email exists in Firestore, it's not available
-            if !emailQuery.documents.isEmpty {
-                return false
-            }
-            
-            // Since fetchSignInMethods is deprecated and has security implications,
-            // we'll rely primarily on Firestore checking for now.
-            // The actual Firebase Auth check will happen during signup attempt.
-            // This is more secure and avoids deprecated methods.
-            return true
-            
-        } catch {
+            // Try to sign in with a dummy password - this will fail but tell us if the email exists
+            _ = try await auth.signIn(withEmail: email, password: "dummy_password_for_check")
+            // If we get here, the email exists in Firebase Auth
             return false
+        } catch {
+            // Check if the error is "user not found" or "wrong password"
+            if let authError = error as NSError? {
+                if authError.code == 17034 { // User not found
+                    return true
+                } else if authError.code == 17009 { // Wrong password (user exists)
+                    return false
+                }
+            }
+            // For other errors, assume email is available
+            return true
         }
     }
     
@@ -296,21 +294,29 @@ class FirebaseService: ObservableObject, @unchecked Sendable {
     }
     
     private func findUserEmailByUsername(_ username: String) async throws -> String {
-        let usernameDoc = try await db.collection("usernames").document(username.lowercased()).getDocument()
-        
-        guard usernameDoc.exists,
-              let userId = usernameDoc.data()?["userId"] as? String else {
-            throw NSError(domain: "FirebaseService", code: 6, userInfo: [NSLocalizedDescriptionKey: "Username not found"])
+        do {
+            let usernameDoc = try await db.collection("usernames").document(username.lowercased()).getDocument()
+            
+            guard usernameDoc.exists,
+                  let userId = usernameDoc.data()?["userId"] as? String else {
+                throw NSError(domain: "FirebaseService", code: 6, userInfo: [NSLocalizedDescriptionKey: "Username not found"])
+            }
+            
+            let userDoc = try await db.collection("users").document(userId).getDocument()
+            
+            guard let userData = userDoc.data(),
+                  let email = userData["email"] as? String else {
+                throw NSError(domain: "FirebaseService", code: 7, userInfo: [NSLocalizedDescriptionKey: "User profile not found"])
+            }
+            
+            return email
+        } catch {
+            // If there's a permission error, provide a more helpful message
+            if let firestoreError = error as NSError?, firestoreError.domain == "FIRFirestoreErrorDomain" && firestoreError.code == 7 {
+                throw NSError(domain: "FirebaseService", code: 8, userInfo: [NSLocalizedDescriptionKey: "Unable to verify username. Please try signing in with your email address instead."])
+            }
+            throw error
         }
-        
-        let userDoc = try await db.collection("users").document(userId).getDocument()
-        
-        guard let userData = userDoc.data(),
-              let email = userData["email"] as? String else {
-            throw NSError(domain: "FirebaseService", code: 7, userInfo: [NSLocalizedDescriptionKey: "User profile not found"])
-        }
-        
-        return email
     }
     
     func signOut() async {
@@ -388,14 +394,12 @@ class FirebaseService: ObservableObject, @unchecked Sendable {
     
     
     func deleteAccount() async -> Bool {
-        
         guard let currentUser = self.currentUser else {
             DispatchQueue.main.async {
                 self.errorMessage = "No user account found to delete"
             }
             return false
         }
-        
         
         DispatchQueue.main.async {
             self.isLoading = true
@@ -410,9 +414,7 @@ class FirebaseService: ObservableObject, @unchecked Sendable {
             }
             
             // 2. Delete user's splits from Firestore
-            let splitsQuery = try await db.collection("splits")
-                .whereField("userId", isEqualTo: currentUser.id)
-                .getDocuments()
+            let splitsQuery = try await db.collection("users").document(currentUser.id).collection("splits").getDocuments()
             
             for document in splitsQuery.documents {
                 try await document.reference.delete()

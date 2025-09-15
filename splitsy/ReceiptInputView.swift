@@ -303,15 +303,24 @@ struct ReceiptInputView: View {
                 // Next Button
                 Button(action: {
                     isNavigatingToAssignmentView = true
-                    onNext?(parsedItems)
+                    // Add a small delay to show the loading animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        onNext?(parsedItems)
+                    }
                 }) {
                     HStack {
                         Spacer()
-                        Text("Next")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.white)
+                        if isNavigatingToAssignmentView {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Next")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.white)
+                        }
                         Spacer()
                     }
                     .padding()
@@ -321,7 +330,7 @@ struct ReceiptInputView: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 8)
-                .disabled(!isNextButtonEnabled)
+                .disabled(!isNextButtonEnabled || isNavigatingToAssignmentView)
                 .opacity(isNextButtonEnabled ? 1.0 : 0.5)
             }
             .padding(.top, 12)

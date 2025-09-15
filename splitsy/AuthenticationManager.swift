@@ -48,8 +48,8 @@ class AuthenticationManager: ObservableObject, @unchecked Sendable {
             .sink { [weak self] isAuthenticated in
                 DispatchQueue.main.async {
                     if let self = self {
-                        // If user becomes authenticated and we're in loading state, update to signed in
-                        if isAuthenticated && self.authState == .loading {
+                        // If user becomes authenticated and we're in loading or needsUsernameSetup state, update to signed in
+                        if isAuthenticated && (self.authState == .loading || self.authState == .needsUsernameSetup) {
                             self.authState = .signedIn
                         }
                         // If user becomes unauthenticated and we're not in a special state, update to signed out

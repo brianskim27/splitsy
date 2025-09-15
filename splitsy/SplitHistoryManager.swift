@@ -28,7 +28,8 @@ class SplitHistoryManager: ObservableObject, @unchecked Sendable {
         let newUserId = authManager.currentUser?.id
         
         // Check if we're switching to a different user
-        let isDifferentUser = currentUserId != newUserId
+        // Only clear data if we had a previous user AND it's different from the new user
+        let isDifferentUser = currentUserId != nil && currentUserId != newUserId
         
         // Only clear data if switching to a different user
         if isDifferentUser {
@@ -68,7 +69,7 @@ class SplitHistoryManager: ObservableObject, @unchecked Sendable {
             }
         }
         
-        // Save full data to Firebase
+        // Save full data to Firebase (with receipt images intact)
         if let authManager = authManager {
             authManager.saveSplits(pastSplits)
         }
@@ -99,6 +100,8 @@ class SplitHistoryManager: ObservableObject, @unchecked Sendable {
         } else if UserDefaults.standard.bool(forKey: "\(userDefaultsKey)_hasData") {
             // If we have a flag that data exists but can't load it, 
             // we'll rely on Firebase to load the data
+            pastSplits = []
+        } else {
             pastSplits = []
         }
     }

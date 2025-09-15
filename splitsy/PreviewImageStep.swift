@@ -5,6 +5,7 @@ struct PreviewImageStep: View {
     var onBack: () -> Void
     var onNext: () -> Void
     @State private var showFullScreen = false
+    @State private var isLoading = false
 
     var body: some View {
         ZStack {
@@ -50,14 +51,26 @@ struct PreviewImageStep: View {
                     Spacer()
                 }
                 Spacer()
-                Button(action: onNext) {
+                Button(action: {
+                    isLoading = true
+                    // Add a small delay to show the loading animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        onNext()
+                    }
+                }) {
                     HStack {
                         Spacer()
-                        Text("Next")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.white)
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Next")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.white)
+                        }
                         Spacer()
                     }
                     .padding()
@@ -65,6 +78,7 @@ struct PreviewImageStep: View {
                     .cornerRadius(14)
                     .shadow(color: Color.blue.opacity(0.18), radius: 8, x: 0, y: 2)
                 }
+                .disabled(isLoading)
                 .padding(.horizontal)
                 .padding(.bottom, 8)
             }
